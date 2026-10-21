@@ -1,0 +1,4 @@
+# BEGIN LowRider Klipper-Backup
+*/15 * * * * /home/dunga/lowrider-backup-tools/run.sh
+@reboot /bin/sleep 120 && /home/dunga/lowrider-backup-tools/run.sh
+# END LowRider Klipper-Backup
