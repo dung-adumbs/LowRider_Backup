@@ -55,7 +55,7 @@ def main():
         if not src.is_file():
             raise RuntimeError('Unreadable config or broken symlink: ' + str(src))
         checked_copy(src, pathlib.Path('printer_data/config') / rel)
-    for name in ('index.html', 'lowrider-light-controls.js'):
+    for name in ('index.html', 'lowrider-light-controls.js', 'cnc-pendant.html', 'cnc-pendant-core.js', 'cnc-pendant.js', 'cnc-pendant.css', 'cnc-pendant-link.js'):
         checked_copy(HOME / 'mainsail' / name, pathlib.Path('mainsail') / name)
     checked_copy(HOME / 'klipper/klippy/extras/cnc_force_jog.py', pathlib.Path('klipper/klippy/extras/cnc_force_jog.py'))
     gcodes = HOME / 'printer_data/gcodes'

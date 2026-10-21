@@ -1,6 +1,11 @@
 {
   "klipper/klippy/extras/cnc_force_jog.py": "cbcd44d909a261ea14b179de1410f3fe6b06a7cb8bb068269a4c57d16a0b0cc9",
-  "mainsail/index.html": "6d7dd217f755918a609a825395ed463713cd8272cdf2d5cc6f810514ae93e744",
+  "mainsail/cnc-pendant-core.js": "d371ec91604ca02e7a2e530c86453587f3d59e3ebf3861bad2474702f4f7efab",
+  "mainsail/cnc-pendant-link.js": "9c990a782200efa89fa1e1de08e5417a7e413432344b5097c30fe530a8763d6e",
+  "mainsail/cnc-pendant.css": "3ebb0521ead9a338a8f0fd25ef8c806c3f6a728a8daa10d40825a4d05387d6b3",
+  "mainsail/cnc-pendant.html": "ac994cf826325f0906bac06314b1192a13417cf71dc0547dadcdd361a8bf5f9e",
+  "mainsail/cnc-pendant.js": "fbe07ab9d7885cce247286c2b584b911754b8174e9140cbbdf9ee2a7b42ece6b",
+  "mainsail/index.html": "6f36a98b5a41f282959f1751a9ed49ff75a0ee7094321937e9ddc398a5d9bdf4",
   "mainsail/lowrider-light-controls.js": "51ac4b542d32d9ea146c97b41a304f484f8765de5fcdf1f4dad80a5f7aac8ace",
   "printer_data/config/cnc_force_jog.cfg": "84b3dfcbc52d7b0071358bac97a50918c290ee14d8fd7dcfcb8342ceaca9b9fc",
   "printer_data/config/cnc_macros.cfg": "6fc3f211f76a07b634fc5e9f75cef0bb038510f044b1d77c89c89178c2281734",
@@ -62,6 +67,6 @@
   "printer_data/gcodes/p38 t1 1-8EM.gcode": "12c6e9505b5bfb428eee9529a088e2c3358ec52097803edab8f09388a9671fe4",
   "printer_data/gcodes/p38 t2 1-8 ball.gcode": "387deffea232fe73c595c1d4f7fbc61fdae2cf897ed73433e03970ad0dba0d03",
   "settings/lowrider.json": "1ccd06a3de76c9d6ed0fb397fbaff691a94cd991fe9ea3da16a373374dc86d36",
-  "settings/mainsail.json": "dc788fc4e7ab742a87d8110982e26b1e8c6258ae40a2751d34f6c8ef68601eba",
+  "settings/mainsail.json": "da3551a5c4d37b8a1078bcbd0bf01f18fd5738506d2586e1811bbc730aeb4778",
   "versions.json": "77ad8a571f84de72500e86e97e3101f0c73989314e695e958c6b310ee8223307"
 }
