@@ -57,6 +57,19 @@
     }
   };
   document.querySelectorAll('[data-pendant-dialog]').forEach(b=>b.addEventListener('click',()=>sections[b.dataset.pendantDialog]()));
-  const topStop=$('#pendant-estop');if(topStop){topStop.addEventListener('click',emergencyStop);$('.toolhead-control-panel .panel-toolbar').append(topStop);}
+  const topStop=$('#pendant-estop');if(topStop)topStop.addEventListener('click',emergencyStop);
+  const fullscreen=$('#pendant-fullscreen');
+  if(fullscreen){
+    const fullscreenLabel=()=>{const on=!!document.fullscreenElement;fullscreen.textContent=on?'Exit full screen':'Full screen';fullscreen.setAttribute('aria-label',on?'Exit full screen':'Enter full screen');queueFit();};
+    fullscreen.addEventListener('click',async()=>{
+      try{
+        if(document.fullscreenElement)await document.exitFullscreen();
+        else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:'hide'});
+        else throw Error('This browser does not offer page full screen. Open the pendant in a browser that supports full screen, or use its full-screen menu option.');
+      }catch(error){const m=modal('Full screen');m.insert(el('p',error.message||'The browser did not allow full screen. Try opening the pendant directly in your Android browser.'));}
+      fullscreenLabel();
+    });
+    document.addEventListener('fullscreenchange',fullscreenLabel);fullscreenLabel();
+  }
   new MutationObserver(()=>{for(const dialog of document.querySelectorAll('dialog')){if(!dialog.querySelector('.pendant-stop'))dialog.prepend(stopButton());if(dialog.querySelector('h3')?.textContent==='Home axes')homeEndstops(dialog);}const panel=$('.toolhead-control-panel');if(panel&&!fitted){new ResizeObserver(queueFit).observe(panel);fitted=true;}queueFit();}).observe(document.documentElement,{childList:true,subtree:true});queueFit();
 })();
