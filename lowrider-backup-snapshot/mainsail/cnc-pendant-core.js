@@ -17,14 +17,14 @@
   let lightAdjustmentQueue = Promise.resolve();
   let jogRequests=0;
   function queueJog(action) {
-    jogRequests++;const toggle=document.getElementById('pendant-coordinate-units');if(toggle)toggle.disabled=true;
-    const next = jogQueue.then(action).finally(()=>{jogRequests--;if(toggle)toggle.disabled=jogRequests>0;});
+    jogRequests++;document.documentElement.dataset.jogRequests=String(jogRequests);const toggle=document.getElementById('pendant-coordinate-units');if(toggle)toggle.disabled=true;
+    const next = jogQueue.then(action).finally(()=>{jogRequests--;document.documentElement.dataset.jogRequests=String(jogRequests);if(toggle)toggle.disabled=jogRequests>0;});
     jogQueue = next.catch(() => {});
     return next;
   }
   let allowBelowZ5 = false;
-  let belowZ5Cap = Number(localStorage.getItem("lowrider-below-z5-cap")) || 30;
-  let safeJogZ = Number(localStorage.getItem('lowrider-safe-jog-z') ?? 5);
+  let belowZ5Cap = window.CncSettings?.get("belowZ5Cap") || 30;
+  let safeJogZ = Number(window.CncSettings?.get('safeJogZ') ?? 5);
   if(!Number.isFinite(safeJogZ)||safeJogZ<0||safeJogZ>109)safeJogZ=5;
   let lastWorkZ = null;
   let jogReference = null;
@@ -282,11 +282,11 @@
       button.dataset.belowSafe=String(jogBelowSafe(axis,move,controlStatus,safeJogZ));
       const text = move.limit ? move.limit === 'max' ? 'Max' : 'Min' : `${move.distance > 0 ? '+' : '−'}${Number((Math.abs(move.distance || 0)/coordinateFactor()).toFixed(4))}`;
       if(button.dataset.lowriderRenderedLabel!==text){const main=document.createElement('span');main.textContent=text;const sub=document.createElement('sub');sub.textContent=axis;sub.style.cssText='font-size:8px;line-height:0;position:relative;bottom:-.25em;margin-left:2px';button.replaceChildren(main,sub);button.dataset.lowriderRenderedLabel=text;}
-      button.title = move.limit ? `${axis} to configured ${move.limit} travel limit` : `${axis} ${Number((move.distance/coordinateFactor()).toFixed(4))} ${coordinateFactor()===25.4?'in':'mm'}`;
-      button.setAttribute('aria-label', `Jog ${axis} ${move.limit || Number((move.distance/coordinateFactor()).toFixed(4))} ${move.limit ? 'travel limit' : coordinateFactor()===25.4?'in':'mm'}`);
+      button.title = move.limit ? `${axis} to configured ${move.limit} travel limit` : `${axis} ${Number((move.distance/coordinateFactor()).toFixed(4))} ${document.documentElement.dataset.coordinateUnit||'mm'}`;
+      button.setAttribute('aria-label', `Jog ${axis} ${move.limit || Number((move.distance/coordinateFactor()).toFixed(4))} ${move.limit ? 'travel limit' : document.documentElement.dataset.coordinateUnit||'mm'}`);
     });
     document.querySelectorAll('[data-lowrider-jog-choice]').forEach(button => {
-      const selected = button.dataset.lowriderJogChoice==='scale'||jogScale===button.dataset.lowriderJogChoice;if(button.dataset.lowriderJogChoice==='scale'){const text=jogScale==='coarse'?'Coarse':'Fine';if(button.dataset.pendantCenter){const unit=coordinateFactor()===25.4?'in':'mm';if(button.dataset.mode!==text+unit){button.replaceChildren(Object.assign(document.createElement('span'),{textContent:'X / Y'}),Object.assign(document.createElement('small'),{textContent:text+' · '+unit}));button.dataset.mode=text+unit;}button.setAttribute('aria-label','X/Y jog increments: '+text);}else button.textContent=text;}button.title=`Switch to ${jogScale==='coarse'?'fine':'coarse'} steps (currently ${jogScale})`;
+      const selected = button.dataset.lowriderJogChoice==='scale'||jogScale===button.dataset.lowriderJogChoice;if(button.dataset.lowriderJogChoice==='scale'){const text=jogScale==='coarse'?'Coarse':'Fine';if(button.dataset.pendantCenter){const unit=document.documentElement.dataset.coordinateUnit||'mm';if(button.dataset.mode!==text+unit){button.replaceChildren(Object.assign(document.createElement('span'),{textContent:'X / Y'}),Object.assign(document.createElement('small'),{textContent:text+' · '+unit}));button.dataset.mode=text+unit;}button.setAttribute('aria-label','X/Y jog increments: '+text);}else button.textContent=text;}button.title=`Switch to ${jogScale==='coarse'?'fine':'coarse'} steps (currently ${jogScale})`;
       button.style.backgroundColor = selected ? '#2e7d32' : '#202020';
       button.setAttribute('aria-pressed', String(selected));
     });
@@ -379,7 +379,7 @@
     const caption = document.createElement('div');caption.id='lowrider-jog-caption'; caption.textContent = 'Jog speed %';
     caption.style.cssText = 'grid-column:1/-1;text-align:center;font-size:11px;opacity:.8';
     const value = document.createElement('input'); value.id='lowrider-jog-rate';value.type='text';value.inputMode='decimal';value.setAttribute('aria-label','Jog speed percent: active, selected in parentheses');value.addEventListener('focus',()=>{value.value=String(jogSpeed);value.select();});
-    value.title='Jog percentage, 10 to 100';value.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();value.blur();}});value.addEventListener('blur',()=>{const rate=Number(value.value.replace(/%/g,'').trim());if(Number.isFinite(rate)&&rate>=10&&rate<=100)jogSpeed=rate;else homingNotice('Enter a jog percentage from 10 to 100.');refreshJogChoices();});
+    value.title='Jog percentage, 10 to 100';value.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();value.blur();}});value.addEventListener('blur',()=>{const rate=Number(value.value.replace(/%/g,'').trim());if(Number.isFinite(rate)&&rate>=10&&rate<=100){jogSpeed=rate;saveShared('jogSpeed',rate);}else homingNotice('Enter a jog percentage from 10 to 100.');refreshJogChoices();});
     value.style.cssText = 'grid-column:2/span 2;grid-row:2;width:100%;min-width:0;text-align:center;font-size:12px;font-weight:bold;background:#202020;color:inherit;border:1px solid #777;border-radius:3px';
     const rates = document.createElement('div'); rates.id = 'lowrider-jog-rates';
     rates.style.cssText = 'grid-column:1/-1;grid-row:4;text-align:center;font-size:9px;opacity:.8;white-space:nowrap';
@@ -392,7 +392,7 @@
       button.style.cssText = `grid-column:${column};grid-row:${row};background:#202020;color:#fff;border:1px solid #777;border-radius:3px;min-height:25px;font-size:12px`;
       button.addEventListener('click', () => {
         jogSpeed = action === 'half' ? 50 : action === 'min' ? 10 : action === 'max' ? 100 : Math.max(10,Math.min(100,jogSpeed+(action === 'plus' ? 1 : -1)));
-        refreshJogChoices();
+        saveShared('jogSpeed',jogSpeed);refreshJogChoices();
       });
       rateBox.append(button);
     }
@@ -407,7 +407,7 @@
       button.style.cssText = 'width:90%;max-width:100px;min-height:28px;color:#fff;border:1px solid #777;border-radius:4px;font-size:12px;font-weight:600';
       button.title = name === 'fine' ? 'X/Y steps divided by 10' : 'Full X/Y step distances';
       button.addEventListener('click', () => {
-        jogScale = jogScale==='coarse'?'fine':'coarse';
+        jogScale = jogScale==='coarse'?'fine':'coarse';saveShared('jogScale',jogScale);
         refreshJogChoices(); updateAvailability();
       });
       stepBox.append(button);
@@ -439,7 +439,7 @@
     return tool.print_time+0.05>tool.estimated_print_time;
   }
   function manualMotionReason(status, allowQueuedJog=false) {
-    if(status?.webhooks?.state!=='ready')return 'Klipper is not ready';
+    if(window.CncSettings&&!window.CncSettings.ready)return 'Loading shared machine settings';if(status?.webhooks?.state!=='ready')return 'Klipper is not ready';
     if(homingPending||(!allowQueuedJog&&motionStillQueued(status)))return 'Wait for motion or the pause lift to finish';
     if(status.virtual_sdcard?.is_active)return 'Pause the running file before jogging or setting tool zero';
     if(status.print_stats?.state==='printing'&&!isMachinePaused(status))return 'Pause the job before jogging or setting tool zero';
@@ -647,13 +647,13 @@
         document.querySelectorAll('[data-machine-position]').forEach(input=>{const axis=input.dataset.machinePosition,i='XYZ'.indexOf(axis);input.disabled=forcedSending||!!status?.cnc_force_jog?.busy||!!manualMotionReason(status,true)||!status?.toolhead?.homed_axes?.includes(axis.toLowerCase());if(document.activeElement!==input&&!input.dataset.sending&&status?.gcode_move)input.value=coordinateText(status.gcode_move.position[i],i);});
         const feedValue=document.getElementById('lowrider-feed-value');
         if(feedValue&&status?.gcode_move&&document.activeElement!==feedValue&&feedValue.dataset.saving!=='true'){const value=String(Math.round(status.gcode_move.speed_factor*100));if(feedValue.value!==value)feedValue.value=value;}
-        if(status?.gcode_move)refreshRunSpeedPreset(status.gcode_move.speed_factor*100);
+        updateMotionNotice(status);if(status?.gcode_move)refreshRunSpeedPreset(status.gcode_move.speed_factor*100);
         if (status?.gcode_move) { syncJogReference(status); refreshJogChoices(); }
         updateAvailability();
         if (!statusResponse.ok || status?.webhooks?.state !== 'ready') throw new Error('Unavailable');
         // Physical endstops are queried only on Home-dialog entry by pendant.js.
         return;
-      } catch (_) { controlStatus = null; document.dispatchEvent(new CustomEvent('cnc-pendant-status',{detail:null})); updateAndroidStatus(null); updateAvailability(); }
+      } catch (_) { controlStatus = null;updateMotionNotice(null); document.dispatchEvent(new CustomEvent('cnc-pendant-status',{detail:null})); updateAndroidStatus(null); updateAvailability(); }
       for (const [axis, key] of endstopNames) {
         const tile = document.getElementById(`lowrider-endstop-${axis}`);
         if (!tile) continue;
@@ -784,7 +784,7 @@
     if(endstops&&!document.getElementById('lowrider-z5-cap')){
       const row=document.createElement('label');row.style.cssText='display:flex;align-items:center;justify-content:center;width:max-content;max-width:100%;margin:0 auto;gap:8px;font-size:12px;padding:8px 0';row.append(document.createTextNode('Below Z5 jog cap'));
       const input=document.createElement('input');input.id='lowrider-z5-cap';input.type='number';input.min='1';input.max='100';input.value=String(belowZ5Cap);input.setAttribute('aria-label','Below safe Z jog cap percent');input.style.cssText='width:58px;background:#202020;color:white;border:1px solid #777;border-radius:3px;padding:5px;text-align:center';
-      input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();input.blur();}});input.addEventListener('blur',()=>{const n=Number(input.value);if(Number.isFinite(n)&&n>=1&&n<=100){belowZ5Cap=n;localStorage.setItem('lowrider-below-z5-cap',String(n));}else homingNotice('Enter a cap from 1 to 100%.');input.value=String(belowZ5Cap);refreshJogChoices();});row.append(input,document.createTextNode('%'));endstops.after(row);
+      input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();input.blur();}});input.addEventListener('blur',()=>{const n=Number(input.value);if(Number.isFinite(n)&&n>=1&&n<=100){belowZ5Cap=n;saveShared('belowZ5Cap',n);}else homingNotice('Enter a cap from 1 to 100%.');input.value=String(belowZ5Cap);refreshJogChoices();});row.append(input,document.createTextNode('%'));endstops.after(row);
     }
     const guard=document.getElementById('lowrider-z5-allow'),capInput=document.getElementById('lowrider-z5-cap');
     if(guard&&capInput&&!document.getElementById('lowrider-z5-controls')){
@@ -793,7 +793,7 @@
       guard.style.cssText+=';grid-column:1;grid-row:1/span 2;width:100%;min-width:0;min-height:67px;font-size:10px;padding:2px;white-space:pre-line;line-height:1.5';
       const safeLabel=document.createElement('label');safeLabel.style.cssText='grid-column:2;grid-row:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-width:0;font-size:9px;line-height:10px';safeLabel.title='Safe jog height in work Z millimeters';
       const safeInput=document.createElement('input');safeInput.id='lowrider-safe-jog-z';safeInput.type='number';safeInput.min='0';safeInput.max='109';safeInput.step='0.1';safeInput.value=String(safeJogZ);safeInput.setAttribute('aria-label','Safe jog work Z height in millimeters');safeInput.style.cssText='width:40px;min-width:0;height:22px;min-height:22px;box-sizing:border-box;background:#202020;color:white;border:1px solid #777;border-radius:3px;padding:1px;text-align:center;font-size:11px';
-      safeInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();safeInput.blur();}});safeInput.addEventListener('blur',()=>{const value=Number(safeInput.value);if(safeInput.value.trim()&&Number.isFinite(value)&&value>=0&&value<=109){safeJogZ=value;localStorage.setItem('lowrider-safe-jog-z',String(value));allowBelowZ5=false;lastWorkZ=null;refreshJogChoices();updateAvailability();}else homingNotice('Enter a safe work Z height from 0 to 109 mm.');safeInput.value=String(safeJogZ);});
+      safeInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();safeInput.blur();}});safeInput.addEventListener('blur',()=>{const value=Number(safeInput.value);if(safeInput.value.trim()&&Number.isFinite(value)&&value>=0&&value<=109){safeJogZ=value;saveShared('safeJogZ',value);allowBelowZ5=false;lastWorkZ=null;refreshJogChoices();updateAvailability();}else homingNotice('Enter a safe work Z height from 0 to 109 mm.');safeInput.value=String(safeJogZ);});
       const safeCaption=document.createElement('span');safeCaption.textContent='Safe Z';const safeValue=document.createElement('span');safeValue.style.cssText='display:flex;align-items:center;gap:2px';safeValue.append(safeInput,document.createTextNode('mm'));safeLabel.append(safeCaption,safeValue);
       const capLabel=capInput.parentElement;if(capLabel.firstChild?.nodeType===3)capLabel.firstChild.remove();
       capLabel.style.cssText='grid-column:2;grid-row:1;display:flex;align-items:center;justify-content:center;gap:2px;min-width:0;font-size:10px;margin:0;padding:0';capLabel.title='Maximum jog speed below safe work Z, percent';
@@ -872,7 +872,21 @@
   document.addEventListener('pointerdown',recordIdleActivity,true);
   document.addEventListener('keydown',recordIdleActivity,true);
   const warningStyle=document.createElement('style');warningStyle.textContent='@keyframes lowriderStepperWarning{0%,100%{filter:brightness(1)}50%{filter:brightness(.35)}}.lowrider-idle-warning{animation:lowriderStepperWarning .8s infinite}';document.head.append(warningStyle);
-  function coordinateFactor(){return document.documentElement.dataset.coordinateUnit==='in'?25.4:1;}
+  function saveShared(key,value){window.CncSettings?.set(key,value).catch(()=>homingNotice('Could not save shared settings. Check the Pi connection.'));}
+  document.addEventListener('cnc-shared-setting',event=>{
+    const {key,value}=event.detail;
+    if(key==='jogSpeed')jogSpeed=value;if(key==='jogScale')jogScale=value;
+    if(key==='safeJogZ'){safeJogZ=value;allowBelowZ5=false;lastWorkZ=null;const input=document.getElementById('lowrider-safe-jog-z');if(input&&document.activeElement!==input)input.value=value;}
+    if(key==='belowZ5Cap'){belowZ5Cap=value;const input=document.getElementById('lowrider-z5-cap');if(input&&document.activeElement!==input)input.value=value;}
+    refreshJogChoices();updateAvailability();
+  });
+  let lastMotionClock=null;
+  function updateMotionNotice(status){
+    const clock=status?.toolhead?.estimated_print_time;if(Number.isFinite(clock)){if(lastMotionClock!==null&&clock<lastMotionClock-1){allowBelowZ5=false;jogReference=null;}lastMotionClock=clock;}else allowBelowZ5=false;
+    const moving=!!status&&(jogRequests>0||motionStillQueued(status)),pad=document.getElementById('lowrider-jog-pad'),box=document.getElementById('pendant-motion-notice');
+    if(pad)pad.classList.toggle('pendant-motion-pending',moving);if(box)box.hidden=!moving;
+  }
+  function coordinateFactor(){return document.documentElement.dataset.coordinateUnit==='in'?25.4:document.documentElement.dataset.coordinateUnit==='cm'?10:1;}
   function coordinateText(mm,index){return (mm/coordinateFactor()).toFixed(coordinateFactor()===25.4?4:index===2?3:2);}
   function machineToWork(target,gm,index){return target-(gm.position[index]-gm.gcode_position[index]);}
   document.addEventListener('cnc-coordinate-units',()=>{

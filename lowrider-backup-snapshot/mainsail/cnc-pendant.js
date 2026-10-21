@@ -21,16 +21,17 @@
     const s=event.detail;latest=s;const ready=s?.webhooks?.state==='ready';$('#pendant-live-state').textContent=!ready?'Disconnected / controller not ready':(s.print_stats?.state==='paused'?'Paused':s.print_stats?.state==='printing'?'Running':'Ready')+(s.print_stats?.filename?' · '+s.print_stats.filename:'');
     renderCoordinates(s);renderJobView(s);queueFit();
   });
-  document.documentElement.dataset.coordinateUnit=localStorage.getItem('cnc-coordinate-unit')==='in'?'in':'mm';
+  document.documentElement.dataset.coordinateUnit=window.CncSettings?.get('units')||'mm';
+  document.addEventListener('cnc-shared-setting',event=>{if(event.detail.key!=='units')return;document.documentElement.dataset.coordinateUnit=event.detail.value;renderCoordinates(latest);document.dispatchEvent(new Event('cnc-coordinate-units'));queueFit();});
   function renderCoordinates(s){
-    const unit=document.documentElement.dataset.coordinateUnit,factor=unit==='in'?25.4:1;
-    const format=(value,i)=>(value/factor).toFixed(unit==='in'?4:i===2?3:2);const table=$('.positions');if(table)table.setAttribute('aria-label','Spindle coordinates in '+(unit==='in'?'inches':'millimeters'));
+    const unit=document.documentElement.dataset.coordinateUnit,factor=unit==='in'?25.4:unit==='cm'?10:1;
+    const format=(value,i)=>(value/factor).toFixed(unit==='in'?4:i===2?3:2);const table=$('.positions');if(table)table.setAttribute('aria-label','Spindle coordinates in '+(unit==='in'?'inches':unit==='cm'?'centimeters':'millimeters'));
     for(const [i,a] of [...'XYZ'].entries()){
       const input=$(`[data-native-axis="${a}"]:not([data-lowrider-position])`);if(s?.gcode_move&&input)input.value=format(s.gcode_move.gcode_position[i],i);
       const range=$('#lowrider-range-'+i),limits=$('#machine-range-'+a);
       if(s?.gcode_move&&s?.toolhead){const offset=s.gcode_move.position[i]-s.gcode_move.gcode_position[i];const text=s.toolhead.homed_axes.includes(a.toLowerCase())?format(s.toolhead.axis_minimum[i]-offset,i)+' to '+format(s.toolhead.axis_maximum[i]-offset,i):'Home '+a+' first';if(range&&range.textContent!==text)range.textContent=text;const machineText=format(s.toolhead.axis_minimum[i],i)+' to '+format(s.toolhead.axis_maximum[i],i);if(limits&&limits.textContent!==machineText)limits.textContent=machineText;}
     }
-    const toggle=$('#pendant-coordinate-units');if(toggle){const text='Coordinates · '+unit+' ⇄';if(toggle.textContent!==text)toggle.textContent=text;toggle.setAttribute('aria-label','Coordinate and jog units: '+unit+'. Switch to '+(unit==='mm'?'inches':'millimeters'));}
+    const toggle=$('#pendant-coordinate-units');if(toggle){const text='Coordinates · '+unit+' ⇄';if(toggle.textContent!==text)toggle.textContent=text;toggle.setAttribute('aria-label','Coordinate and jog units: '+unit+'. Switch to '+({mm:'centimeters',cm:'inches',in:'millimeters'}[unit]));}
   }
   async function homeEndstops(dialog){
     if(dialog.dataset.endstopsRequested)return;dialog.dataset.endstopsRequested='true';const row=el('div',undefined,'pendant-endstop-row');row.append(el('span','Endstops'));const switches=el('div',undefined,'switches');row.append(switches);const names=[['X','stepper_x'],['Y','stepper_y'],['Y1','y1'],['Z','stepper_z'],['Z1','z1']];const tiles=names.map(([name])=>{const e=el('span',name);e.setAttribute('role','status');e.style.background='#555';e.title='Reading';switches.append(e);return e;});dialog.querySelector('h3')?.after(row);
@@ -68,7 +69,7 @@
     const settings=el('div',undefined,'pendant-jog-settings');pad.before(settings);settings.append(rate);
     const zone=el('div');zone.id='pendant-jog-zone';pad.before(zone);zone.append(pad);
     $('#pendant-old-xy-label')?.remove();scale.dataset.pendantCenter='true';scale.dataset.mode='';scale.style.cssText='grid-column:4;grid-row:5';pad.append(scale);scale.replaceChildren(el('span','X / Y'),el('small',scale.textContent));
-    z.dataset.pendantQuadrant='true';pad.append(z);
+    z.dataset.pendantQuadrant='true';pad.append(z);const motion=el('div');motion.id='pendant-motion-notice';motion.hidden=true;motion.setAttribute('role','status');motion.append(el('strong','IN MOTION'),el('span','Additional moves will be queued.'),el('span','Proceed with caution.'));pad.append(motion);
     const safety=el('div');safety.id='pendant-safety-strip';zone.after(safety);safety.append(safe);oldScale.hidden=true;
     const cap=safe.lastElementChild;cap.prepend(el('span','Jog cap','pendant-cap-caption'));
     const actions=el('div');actions.id='pendant-actions';safety.after(actions);actions.append(home,$('#lowrider-grid-zero'),$('#lowrider-pause-resume'),$('#lowrider-grid-light').parentElement);active.hidden=true;
@@ -92,7 +93,10 @@
     for(const row of positions.querySelectorAll('.position-box')){row.setAttribute('role','row');row.querySelector('.v-input').classList.add('work-position-cell');}
     for(const [i,row] of [...positions.querySelectorAll('.position-box')].entries()){const range=el('div','Reading…','machine-range');range.id='machine-range-'+'XYZ'[i];row.prepend(range);}
     const caption=$('.coordinate-caption');caption.textContent='';const toggle=el('button','Coordinates · mm ⇄');toggle.id='pendant-coordinate-units';toggle.title='Switch coordinate entry and normal jog increments between millimeters and inches. Safe Z settings and speed readouts retain their labeled units.';
-    toggle.addEventListener('click',()=>{document.activeElement?.blur();document.documentElement.dataset.coordinateUnit=document.documentElement.dataset.coordinateUnit==='mm'?'in':'mm';localStorage.setItem('cnc-coordinate-unit',document.documentElement.dataset.coordinateUnit);renderCoordinates(latest);document.dispatchEvent(new Event('cnc-coordinate-units'));queueFit();});caption.append(toggle);renderCoordinates(latest);
+    toggle.title='Double-tap to switch mm → cm → inches. Safe Z settings and speeds retain their labeled units.';
+    let lastUnitTap=0;
+    toggle.addEventListener('click',()=>{const now=Date.now();if(now-lastUnitTap>550){lastUnitTap=now;toggle.classList.add('unit-tap-armed');setTimeout(()=>toggle.classList.remove('unit-tap-armed'),550);return;}lastUnitTap=0;toggle.classList.remove('unit-tap-armed');document.activeElement?.blur();const next={mm:'cm',cm:'in',in:'mm'}[document.documentElement.dataset.coordinateUnit]||'mm';window.CncSettings.set('units',next).catch(()=>{const m=modal('Settings not saved');m.insert(el('p','Check the connection to the Pi.'));});});
+    caption.append(toggle);renderCoordinates(latest);
     renderJobView(latest);queueFit();
   }
   const sections={
@@ -101,7 +105,7 @@
       const m=modal('Files / job');m.feedback.textContent='Loading files…';m.insert(el('p',latest?.print_stats?.state||'Connecting'));const jobs=$('#lowrider-job-controls');if(jobs)m.insert(jobs);m.dialog.addEventListener('close',()=>{if(jobs)$('.macrogroup_lowrider-general_panel .v-card__text').append(jobs);});
       const search=el('input');search.className='file-search';search.placeholder='Filter files';search.setAttribute('aria-label','Filter G-code files');m.insert(search);const list=el('select');list.className='file-list';list.size=7;list.setAttribute('aria-label','G-code files');m.insert(list);
       try{const files=(await api('/server/files/list?root=gcodes')).filter(f=>/\.(gcode|gco|gc|nc|ngc|tap)$/i.test(f.path));const render=()=>{list.replaceChildren();for(const file of files.filter(f=>f.path.toLowerCase().includes(search.value.toLowerCase())).sort((a,b)=>b.modified-a.modified)){const o=el('option',file.path);o.value=file.path;o.disabled=/quarantine|old-machine-origin/i.test(file.path);list.append(o);}};search.addEventListener('input',render);render();m.feedback.textContent='Archived/quarantined files cannot be started here. Check tool, zero, clamps and router power before starting.';
-        m.add('Start selected file…',async()=>{const filename=list.value;if(!filename)throw Error('Select a runnable file.');const current=await idle();if(current.toolhead?.homed_axes!=='xyz')throw Error('Home all axes and establish work/tool zeros first.');const confirm=modal('Start CNC job?');confirm.insert(el('p',filename));confirm.insert(el('p','Confirm tool/work zeros, clearance, clamps, feed settings and manual router power. This starts the program and can move immediately.'));confirm.add('Start job',async()=>{const fresh=await idle();if(fresh.toolhead?.homed_axes!=='xyz')throw Error('Axes are no longer all homed.');await api('/printer/print/start','POST',{filename});confirm.dialog.close();m.dialog.close();});});
+        m.add('Start selected file…',async()=>{const filename=list.value;if(!filename)throw Error('Select a runnable file.');const current=await idle();if(current.toolhead?.homed_axes!=='xyz')throw Error('Home all axes and establish work/tool zeros first.');const confirm=modal('Start CNC job?');confirm.insert(el('p',filename));confirm.insert(el('p','Confirm tool/work zeros, clearance, clamps, feed settings and manual router power. This starts the program and can move immediately.'));confirm.add('Start job',async()=>{const fresh=await idle();if(fresh.toolhead?.homed_axes!=='xyz')throw Error('Axes are no longer all homed.');await command('START_JOB');await api('/printer/print/start','POST',{filename});confirm.dialog.close();m.dialog.close();});});
       }catch(error){m.feedback.textContent=error.message;}
     },
     async machine(){
