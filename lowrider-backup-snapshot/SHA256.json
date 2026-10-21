@@ -1,6 +1,6 @@
 {
   "klipper/klippy/extras/cnc_force_jog.py": "cbcd44d909a261ea14b179de1410f3fe6b06a7cb8bb068269a4c57d16a0b0cc9",
-  "mainsail/cnc-pendant-core.js": "d371ec91604ca02e7a2e530c86453587f3d59e3ebf3861bad2474702f4f7efab",
+  "mainsail/cnc-pendant-core.js": "f23b57fd31c4a9f5f368dd5fcd7d5541a1541da4d3a67a07ec4d820861d506ee",
   "mainsail/cnc-pendant-link.js": "9c990a782200efa89fa1e1de08e5417a7e413432344b5097c30fe530a8763d6e",
   "mainsail/cnc-pendant.css": "3ebb0521ead9a338a8f0fd25ef8c806c3f6a728a8daa10d40825a4d05387d6b3",
   "mainsail/cnc-pendant.html": "ac994cf826325f0906bac06314b1192a13417cf71dc0547dadcdd361a8bf5f9e",

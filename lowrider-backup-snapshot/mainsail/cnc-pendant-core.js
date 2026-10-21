@@ -67,7 +67,7 @@
       const selection=forceSelection(axis);if(!selection)throw Error('Select at least one motor to move');
       const response=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:`CNC_FORCE_JOG AXIS=${axis} DISTANCE=${distance} TOKEN=${status.cnc_force_jog.sequence} MOTORS=${selection} SINGLE_CONFIRM=${singleMotorConfirmed[axis]?1:0}`})});
       const data=await response.json();if(!response.ok||data.error)throw Error(data.error?.message||'Forced move failed');
-    }catch(error){homingNotice(error.message);}finally{forcedSending=false;endstopRefreshPending=true;try{await refreshForceStatus();}catch(_){}updateAvailability();}
+    }catch(error){homingNotice(error.message);}finally{forcedSending=false;try{await refreshForceStatus();}catch(_){}updateAvailability();}
   }
   function forcedUnavailable(button,status){
     if(forcedSending||status?.cnc_force_jog?.busy)return 'Wait for the forced move to finish';
@@ -334,7 +334,7 @@
           const result = await sent.json();
           if (!sent.ok || result.error) throw new Error(result.error?.message || 'Jog command failed');
         } catch (error) { homingNotice(`Jog: ${error.message}`); }
-        finally { endstopRefreshPending = true; refreshJogChoices(); updateAvailability(); }
+        finally {  refreshJogChoices(); updateAvailability(); }
       });});
       if(axis==='Z'){const n=Math.abs(step),sign=Math.sign(step);const col=sign<0?[25,10,1,.1].indexOf(n)+1:[.1,1,10,25].indexOf(n)+6;button.style.gridColumn=String(col);button.style.gridRow='1';button.style.minHeight='32px';zBar.append(button);}else pad.append(button);
     }
@@ -500,7 +500,7 @@
           if (!sent.ok || result.error) throw new Error(result.error?.message || 'Disable command failed');
           homingNotice('Steppers disabled. Home again and recheck work zeros before cutting.');
         } catch (error) { homingNotice(error.message); }
-        finally { homingPending = false; endstopRefreshPending = true; }
+        finally { homingPending = false;  }
       })();
       return;
     }
@@ -561,7 +561,7 @@
         notify(`Command not completed: ${error.message}`);
       } finally {
         homingPending = false;
-        endstopRefreshPending = true;
+        
       }
     });
     dialog.addEventListener('close', () => { dialog.remove(); button.focus(); });
@@ -603,12 +603,8 @@
     setTimeout(refreshRanges, 2000);
   }
   const endstopNames = [['X', 'stepper_x'], ['Y', 'stepper_y'], ['Y1', 'y1'], ['Z', 'stepper_z'], ['Z1', 'z1']];
-  let endstopRefreshPending = true;
-  let lastEndstopMotion = null;
-  document.addEventListener('click', event => {
-    const button = event.target.closest?.('.toolhead-control-panel button');
-    if (button && /^[+−–-]\s*\d/.test(button.textContent.trim())) endstopRefreshPending = true;
-  }, true);
+
+
   async function refreshEndstops() {
     try {
     if (document.getElementById('lowrider-endstops')) {
@@ -625,7 +621,7 @@
         if (!statusResponse.ok || status?.webhooks?.state !== 'ready') throw new Error('Unavailable');
         // Physical endstops are queried only on Home-dialog entry by pendant.js.
         return;
-      } catch (_) { controlStatus = null; updateAvailability(); }
+      } catch (_) { controlStatus = null; document.dispatchEvent(new CustomEvent('cnc-pendant-status',{detail:null})); updateAndroidStatus(null); updateAvailability(); }
       for (const [axis, key] of endstopNames) {
         const tile = document.getElementById(`lowrider-endstop-${axis}`);
         if (!tile) continue;
@@ -711,7 +707,7 @@
       zero.addEventListener('click',()=>{
         const modal=cncDialog('Set this position as work zero?');const explanation=document.createElement('p');explanation.textContent=`Current work position: ${['X','Y','Z'].map((a,i)=>a+' '+(controlStatus?.gcode_move?.gcode_position[i]??0).toFixed(2)).join(' / ')} mm. Choose which coordinates to set to zero; this does not move the tool.`;explanation.style.cssText='font-size:13px;line-height:1.4;margin-top:10px';modal.dialog.append(explanation);
         for(const [label,script,axes] of [['Set Tool Z Zero','ZERO_Z','z'],['Zero All','ZERO_ALL','xyz'],['Zero XY','ZERO_XY','xy'],['Zero X','ZERO_X','x'],['Zero Y','ZERO_Y','y']]){
-          const choice=modal.add(label,async()=>{modal.dialog.close();try{await runCncCommand(script,true);allowBelowZ5=false;refreshJogChoices();endstopRefreshPending=true;}catch(error){homingNotice(error.message);}},script==='ZERO_Z'?'#1976d2':'#202020');
+          const choice=modal.add(label,async()=>{modal.dialog.close();try{await runCncCommand(script,true);allowBelowZ5=false;refreshJogChoices();}catch(error){homingNotice(error.message);}},script==='ZERO_Z'?'#1976d2':'#202020');
           if(script==='ZERO_Z'){choice.style.minHeight='56px';choice.style.fontSize='16px';choice.style.fontWeight='bold';}choice.disabled=[...axes].some(axis=>!controlStatus?.toolhead.homed_axes.includes(axis))||(isMachinePaused(controlStatus)&&script!=='ZERO_Z');if(isMachinePaused(controlStatus)&&script!=='ZERO_Z')choice.title='Keep the job XY origin unchanged while paused';
         }
         modal.add('Cancel',()=>modal.dialog.close());modal.open();
@@ -857,7 +853,7 @@
     if(needsClearanceConfirm(axis,move,status)&&!confirmed){if(!await confirmClearance(axis,move,status))return;return sendDirectJog(axis,target,true);}
     const speed=effectiveJogPercent(axis,target,status),feed=(axis==='Z'?1500:12000)*speed/100/Math.max(.01,status.gcode_move.speed_factor||1);
     const sent=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:`_CLIENT_LINEAR_MOVE ${axis}=${Number(target.toFixed(6))} F=${Number(feed.toFixed(3))} ABSOLUTE=1`})});
-    const result=await sent.json();if(!sent.ok||result.error)throw Error(result.error?.message||'Move failed');endstopRefreshPending=true;
+    const result=await sent.json();if(!sent.ok||result.error)throw Error(result.error?.message||'Move failed');
   }
   function mountDirectPositions(toolhead) {
     Array.from(toolhead.querySelectorAll('input:not([data-lowrider-position])')).slice(0,3).forEach((original,i)=>{
@@ -988,7 +984,7 @@
       refresh.textContent = 'Refresh Endstops';
       refresh.title = 'Read the physical endstop switches and update the colored indicators';
       refresh.style.cssText = 'margin-bottom:12px';
-      refresh.addEventListener('click', () => { endstopRefreshPending = true; });
+      refresh.addEventListener('click', () => {  });
       refresh.style.cssText = 'margin-bottom:12px';
       refresh.id = 'lowrider-endstop-refresh';
       endstops.append(heading, grid);
