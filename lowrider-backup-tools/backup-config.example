@@ -1,0 +1,12 @@
+github_token=""
+github_username=dung-adumbs
+github_repository=LowRider_Backup
+branch_name=main
+commit_username="LowRider Backup"
+commit_email="lowrider-backup@users.noreply.github.com"
+git_protocol=ssh
+git_host=github.com
+ssh_user=git
+allow_empty_commits=false
+backupPaths=( "lowrider-backup-snapshot/*" "lowrider-backup-docs/*" "lowrider-backup-tools/prepare.py" "lowrider-backup-tools/run.sh" "lowrider-backup-tools/backup-config.example" "lowrider-backup-tools/cron.example" )
+exclude=( ".env" "secrets.conf" "*.swp" "*.tmp" "*.bak" "*.bkp" "*.backup" "*.key" "*.pem" "id_*" "lowrider_backup" )

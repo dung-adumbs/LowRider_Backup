@@ -1,0 +1,8 @@
+{
+  "klipper": "77d5d942ed2fb6d3f688114f68d236ccd391bda7",
+  "klipper-backup": "32f42e8e9defe023fbd8e064444ac63f5e28b01a",
+  "mainsail": "v2.17.0",
+  "mainsail-config": "ff3869a621db17ce3ef660adbbd3fa321995ac42",
+  "moonraker": "1ed102edfb34906115bfeb02712d4c839b93a7a9",
+  "os": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.4\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n"
+}

@@ -1,0 +1,13 @@
+.env
+secrets.conf
+.env
+secrets.conf
+*.swp
+*.tmp
+*.bak
+*.bkp
+*.backup
+*.key
+*.pem
+id_*
+lowrider_backup

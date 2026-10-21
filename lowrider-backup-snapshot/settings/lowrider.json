@@ -1,0 +1,22 @@
+{
+  "keepout": [
+    {
+      "enabled": true,
+      "margin": 5,
+      "name": "Front strip Y10-110",
+      "safeZ": 50,
+      "xmax": 624.0,
+      "xmin": 0.0,
+      "ymax": 110,
+      "ymin": 10
+    },
+    {
+      "enabled": false,
+      "name": "Block 2"
+    },
+    {
+      "enabled": false,
+      "name": "Block 3"
+    }
+  ]
+}
