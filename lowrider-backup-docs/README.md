@@ -51,7 +51,7 @@ The interface is optimized for a narrow touchscreen: larger touch targets, fewer
 <tr><td align="center"><img src="screenshots/android-coarse.png" alt="Android-sized Spindle Location panel in coarse mode" width="360"></td><td align="center"><img src="screenshots/android-fine.png" alt="Android-sized Spindle Location panel in fine mode with smaller movement increments" width="360"></td></tr>
 </table>
 
-*Responsive browser captures at a 412-pixel phone viewport, cropped to the spindle panel; these show the Android layout rather than a native Android app.*
+*Responsive browser captures at phone-sized viewports, cropped to the spindle panel; these show the Android layout rather than a native Android app.*
 
 ### Why step buttons instead of a jog wheel?
 
@@ -138,6 +138,14 @@ This private repository preserves the LowRider's configuration, custom controls,
 The schedule checks **every 15 minutes** and commits only changed content; failed uploads retry on a later check. **G-code files are included**, recursively, along with text/Markdown notes. Archived and quarantined programs retain their directory names: backing them up does not make them suitable for the current machine origin or tool setup. This is a configuration-and-program backup, not a full SD-card image: thumbnails, videos, logs, network credentials, private keys, and authorization data are excluded. Browser-local choices such as Safe Z and jog cap must be rechecked on a new device.
 
 See **[RESTORE.md](RESTORE.md)** for paths, integrity checks, settings import, and backup maintenance. Mainsail upgrades can replace the loading page or change selectors; Klipper upgrades can affect the custom controller extension. Test compatibility before relying on either after an upgrade.
+
+## Help make Klipper better for CNC
+
+I'm a GitHub newbie, and I'd love your help turning this into a very usable **Klipper CNC interface**. Pull requests, suggestions, bug reports, and direct feedback are all welcome. You don't need to know how to write code to contribute—tell me what feels awkward, what would make setup easier, or what you wish your CNC controls could do.
+
+If you're comfortable with GitHub, open an **issue** to discuss an idea or submit a **pull request** with an improvement. Screenshots and a few words about your machine, phone/browser, and what you expected are especially useful. Feedback on Android usability, jogging, work zeros, pause/resume, and clearance controls would be great.
+
+The goal is to build this around real CNC workflows and make it useful beyond my own LowRider. This repository is currently a private machine backup; collaboration here requires access. A public, reusable release will need its own reviewed installation instructions and machine-independent defaults.
 
 ---
 
