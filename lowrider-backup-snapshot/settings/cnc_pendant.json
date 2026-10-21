@@ -3,5 +3,5 @@
   "jogScale": "coarse",
   "jogSpeed": 50,
   "safeJogZ": 5,
-  "units": "cm"
+  "units": "mm"
 }
