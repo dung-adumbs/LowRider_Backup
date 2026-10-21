@@ -91,7 +91,7 @@
     bar.style.gridTemplateRows='repeat(3,minmax(0,1fr))';
     bar.style.gridRow='6 / span 3';
     const label=bar.querySelector('div');label.style.gridColumn='2';label.style.gridRow='1 / -1';
-    bar.querySelectorAll('button').forEach(b=>{const step=Number(b.dataset.lowriderJogStep),n=Math.abs(step);b.style.gridColumn=step<0?'1':'3';b.style.gridRow=String(forced?({1:1,10:2,25:3}[n]||1):({'0.1':1,1:2,10:3,25:4}[n]||1));});
+    bar.querySelectorAll('button').forEach(b=>{const step=Number(b.dataset.lowriderJogStep),n=Math.abs(step);b.style.gridColumn=step<0?'1':'3';const row=forced?({1:1,10:2,25:3}[n]||1):({'0.1':1,1:2,10:3,25:4}[n]||1);b.style.gridRow=String(!forced&&step>0&&n!==25?4-row:row);});
     document.getElementById('lowrider-jog-pad').dataset.pendantFine='false';
   }
   function layoutForcedZ(){
