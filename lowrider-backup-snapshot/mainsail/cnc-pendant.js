@@ -33,6 +33,23 @@
     const b=event.target.closest?.('[data-lowrider-disable-steppers]');if(!b)return;if(b.dataset.pendantConfirmed){delete b.dataset.pendantConfirmed;return;}
     event.preventDefault();event.stopImmediatePropagation();const m=modal('Disable steppers?');m.dialog.querySelector('.dialog-actions button').textContent='Cancel';m.insert(el('p','This releases motor holding torque. The gantry may shift or drop, and axes will need homing again. Continue?'));m.add('Yes, disable steppers',async()=>{await idle();m.dialog.close();b.dataset.pendantConfirmed='true';b.click();});
   },true);
+  function arrangePendant(){
+    if($('#pendant-jog-zone'))return;
+    const pad=$('#lowrider-jog-pad'),z=$('#lowrider-horizontal-z'),scale=$('#lowrider-scale-toggle'),safe=$('#lowrider-z5-controls'),active=$('#lowrider-active-controls'),home=$('#lowrider-home-dialog'),timeout=$('#lowrider-stepper-timeout-row');
+    if(!pad||!z||!safe||!active||!home||!timeout||!$('#lowrider-feed-factor')||!$('[data-lowrider-disable-steppers]'))return;
+    const rate=pad.querySelector('[aria-label="Jog speed adjustment"]'),oldScale=scale.parentElement;
+    const settings=el('div',undefined,'pendant-jog-settings');pad.before(settings);settings.append(rate);
+    const zone=el('div');zone.id='pendant-jog-zone';pad.before(zone);zone.append(pad);
+    $('#pendant-old-xy-label')?.remove();scale.dataset.pendantCenter='true';scale.dataset.mode='';scale.style.cssText='grid-column:4;grid-row:5';pad.append(scale);scale.replaceChildren(el('span','X / Y'),el('small',scale.textContent));
+    z.dataset.pendantQuadrant='true';pad.append(z);
+    const safety=el('div');safety.id='pendant-safety-strip';zone.after(safety);safety.append(safe);oldScale.hidden=true;
+    const cap=safe.lastElementChild;cap.prepend(el('span','Jog cap','pendant-cap-caption'));
+    const actions=el('div');actions.id='pendant-actions';safety.after(actions);actions.append(home,$('#lowrider-grid-zero'),$('#lowrider-pause-resume'),$('#lowrider-grid-light').parentElement);active.hidden=true;
+    const auxiliary=$('#pendant-auxiliary');auxiliary.append($('.macrogroup_lowrider-homing_panel'),timeout);
+    const disable=$('[data-lowrider-disable-steppers]');disable.textContent='Steppers';disable.setAttribute('aria-label','Disable Steppers');$('.pendant-tabs').append(disable);
+    actions.after($('#lowrider-feed-factor'));
+    queueFit();
+  }
   const sections={
     async keepouts(){const m=modal('Keep-out areas'),panel=$('#lowrider-keepout-panel');if(panel){panel.style.setProperty('display','block','important');m.insert(panel);}else m.feedback.textContent='Settings are loading; close and try again.';m.dialog.addEventListener('close',()=>{if(panel){panel.style.removeProperty('display');$('.pendant-column').append(panel);}});},
     async files(){
@@ -43,7 +60,7 @@
       }catch(error){m.feedback.textContent=error.message;}
     },
     async machine(){
-      const m=modal('Machine limits (current session)');try{const s=(await api('/printer/objects/query?toolhead')).status.toolhead,inputs={};for(const [key,label,min,max] of [['max_velocity','Velocity mm/s',1,1000],['max_accel','Acceleration mm/s²',1,50000],['square_corner_velocity','Corner velocity mm/s',0,100],['minimum_cruise_ratio','Minimum cruise ratio',0,1]]){const row=el('label',label,'dialog-field'),value=el('input');value.type='number';value.min=min;value.max=max;value.step='any';value.value=s[key]??'';value.setAttribute('aria-label',label);if(s[key]===undefined)value.disabled=true;row.append(value);inputs[key]={value,min,max};m.insert(row);}m.insert(el('p','Session changes only; printer.cfg is not rewritten.'));
+      const m=modal('Machine limits (current session)');const timeout=$('#lowrider-stepper-timeout-row');if(timeout){m.insert(timeout);m.dialog.addEventListener('close',()=>$('#pendant-auxiliary').append(timeout));}try{const s=(await api('/printer/objects/query?toolhead')).status.toolhead,inputs={};for(const [key,label,min,max] of [['max_velocity','Velocity mm/s',1,1000],['max_accel','Acceleration mm/s²',1,50000],['square_corner_velocity','Corner velocity mm/s',0,100],['minimum_cruise_ratio','Minimum cruise ratio',0,1]]){const row=el('label',label,'dialog-field'),value=el('input');value.type='number';value.min=min;value.max=max;value.step='any';value.value=s[key]??'';value.setAttribute('aria-label',label);if(s[key]===undefined)value.disabled=true;row.append(value);inputs[key]={value,min,max};m.insert(row);}m.insert(el('p','Session changes only; printer.cfg is not rewritten.'));
         m.add('Apply session limits',async()=>{await idle();const names={max_velocity:'VELOCITY',max_accel:'ACCEL',square_corner_velocity:'SQUARE_CORNER_VELOCITY',minimum_cruise_ratio:'MINIMUM_CRUISE_RATIO'},params=[];for(const [key,{value,min,max}] of Object.entries(inputs)){if(value.disabled)continue;const n=Number(value.value);if(!value.value.trim()||!Number.isFinite(n)||n<min||n>max)throw Error('Check '+key);params.push(names[key]+'='+n);}await command('SET_VELOCITY_LIMIT '+params.join(' '));m.feedback.textContent='Session limits applied.';});}catch(error){m.feedback.textContent=error.message;}
     },
     async macros(){
@@ -71,5 +88,7 @@
     });
     document.addEventListener('fullscreenchange',fullscreenLabel);fullscreenLabel();
   }
-  new MutationObserver(()=>{for(const dialog of document.querySelectorAll('dialog')){if(!dialog.querySelector('.pendant-stop'))dialog.prepend(stopButton());if(dialog.querySelector('h3')?.textContent==='Home axes')homeEndstops(dialog);}const panel=$('.toolhead-control-panel');if(panel&&!fitted){new ResizeObserver(queueFit).observe(panel);fitted=true;}queueFit();}).observe(document.documentElement,{childList:true,subtree:true});queueFit();
+  new MutationObserver(()=>{arrangePendant();for(const dialog of document.querySelectorAll('dialog')){if(!dialog.querySelector('.pendant-stop'))dialog.prepend(stopButton());if(dialog.querySelector('h3')?.textContent==='Home axes')homeEndstops(dialog);}const panel=$('.toolhead-control-panel');if(panel&&!fitted){new ResizeObserver(queueFit).observe(panel);fitted=true;}queueFit();}).observe(document.documentElement,{childList:true,subtree:true});queueFit();
 })();
+
+

@@ -78,13 +78,22 @@
     return forceSelection(axis)?'':'Select at least one motor to move';
   }
   function renderForcedButton(button,axis,step){
-    const spec=forceSpec(axis,step);button.style.display=spec.hidden?'none':'';button.classList.remove('lowrider-force-flash');delete button.dataset.lowriderRenderedLabel;
+    button.dataset.pendantForced='true';const spec=forceSpec(axis,step);button.style.display=spec.hidden?'none':'';button.classList.remove('lowrider-force-flash');delete button.dataset.lowriderRenderedLabel;
     if(spec.hidden)return;
     if(spec.motor!==undefined){const active=forceMotors[axis][spec.motor];button.textContent=`${axis}${spec.motor?'1':''} ${active?'Move':'Hold'}`;button.style.backgroundColor=active?'#fbc02d':'#b71c1c';button.style.color=active?'#111':'#fff';button.style.fontSize='9px';button.setAttribute('aria-label',`${axis}${spec.motor?'1':''}: ${active?'Move':'Hold energized'}`);}
     else{button.textContent=`${spec.distance>0?'+':'−'}${Math.abs(spec.distance)} ${axis}`;button.style.backgroundColor='#d50000';button.style.color='white';button.style.fontSize='12px';button.classList.add('lowrider-force-flash');button.setAttribute('aria-label',`Forced ${axis} ${spec.distance} millimeters at 1 millimeter per second`);}
   }
+  function layoutPendantZ(bar){
+    const forced=forcedAxis('Z'),fine=jogScale==='fine'&&!forced;
+    bar.style.gridTemplateColumns='minmax(0,1fr) 18px minmax(0,1fr)';
+    bar.style.gridTemplateRows=`repeat(${fine?4:3},minmax(0,1fr))`;
+    bar.style.gridRow=`6 / span ${fine?4:3}`;
+    const label=bar.querySelector('div');label.style.gridColumn='2';label.style.gridRow='1 / -1';
+    bar.querySelectorAll('button').forEach(b=>{const step=Number(b.dataset.lowriderJogStep),n=Math.abs(step);b.style.gridColumn=step<0?'1':'3';b.style.gridRow=String(forced?({1:1,10:2,25:3}[n]||1):({'0.1':1,1:2,10:3,25:4}[n]||1));});
+    document.getElementById('lowrider-jog-pad').dataset.pendantFine=String(fine);
+  }
   function layoutForcedZ(){
-    const bar=document.getElementById('lowrider-horizontal-z');if(!bar||!forcedAxis('Z'))return;
+    const bar=document.getElementById('lowrider-horizontal-z');if(!bar||!forcedAxis('Z'))return;if(bar.dataset.pendantQuadrant){layoutPendantZ(bar);return;}
     bar.style.gridTemplateColumns='repeat(7,minmax(0,1fr))';bar.querySelector('div').style.gridColumn='4';
     bar.querySelectorAll('button').forEach(b=>{const step=Number(b.dataset.lowriderJogStep),n=Math.abs(step);b.style.gridColumn=String(step<0?({25:1,10:2,1:3}[n]||1):({1:5,10:6,25:7}[n]||7));});
   }
@@ -247,7 +256,7 @@
     document.querySelectorAll('[data-lowrider-jog-axis]').forEach(button => {
       const axis = button.dataset.lowriderJogAxis;
       if(forcedAxis(axis)){renderForcedButton(button,axis,Number(button.dataset.lowriderJogStep));return;}
-      button.classList.remove('lowrider-force-flash');button.style.backgroundColor='#252525';button.style.color='#eee';button.style.fontSize='13px';
+      delete button.dataset.pendantForced;button.classList.remove('lowrider-force-flash');button.style.backgroundColor='#252525';button.style.color='#eee';button.style.fontSize='13px';
       const move = jogSpec(axis, Number(button.dataset.lowriderJogStep), jogScale);
       button.style.display = move.hidden ? 'none' : '';
       const text = move.limit ? move.limit === 'max' ? 'Max' : 'Min' : `${move.distance > 0 ? '+' : '−'}${Math.abs(move.distance || 0)}`;
@@ -256,12 +265,12 @@
       button.setAttribute('aria-label', `Jog ${axis} ${move.limit || move.distance} ${move.limit ? 'travel limit' : 'mm'}`);
     });
     document.querySelectorAll('[data-lowrider-jog-choice]').forEach(button => {
-      const selected = button.dataset.lowriderJogChoice==='scale'||jogScale===button.dataset.lowriderJogChoice;if(button.dataset.lowriderJogChoice==='scale')button.textContent=jogScale==='coarse'?'Coarse':'Fine';button.title=`Switch to ${jogScale==='coarse'?'fine':'coarse'} steps (currently ${jogScale})`;
+      const selected = button.dataset.lowriderJogChoice==='scale'||jogScale===button.dataset.lowriderJogChoice;if(button.dataset.lowriderJogChoice==='scale'){const text=jogScale==='coarse'?'Coarse':'Fine';if(button.dataset.pendantCenter){if(button.dataset.mode!==text){button.replaceChildren(Object.assign(document.createElement('span'),{textContent:'X / Y'}),Object.assign(document.createElement('small'),{textContent:text}));button.dataset.mode=text;}button.setAttribute('aria-label','X/Y jog increments: '+text);}else button.textContent=text;}button.title=`Switch to ${jogScale==='coarse'?'fine':'coarse'} steps (currently ${jogScale})`;
       button.style.backgroundColor = selected ? '#2e7d32' : '#202020';
       button.setAttribute('aria-pressed', String(selected));
     });
     const zBar=document.getElementById('lowrider-horizontal-z');
-    if(zBar){zBar.style.gridTemplateColumns=`repeat(${jogScale==='coarse'?7:9},minmax(0,1fr))`;zBar.querySelector('div').style.gridColumn=jogScale==='coarse'?'4':'5';zBar.querySelectorAll('button').forEach(button=>{const step=Number(button.dataset.lowriderJogStep),n=Math.abs(step);button.style.gridColumn=String(jogScale==='coarse'?(step<0?{'.1':3,'0.1':3,'1':2,'10':1}[n]:{'0.1':5,'1':6,'10':7}[n])||1:(step<0?[25,10,1,.1].indexOf(n)+1:[.1,1,10,25].indexOf(n)+6));});}
+    if(zBar?.dataset.pendantQuadrant)layoutPendantZ(zBar);else if(zBar){zBar.style.gridTemplateColumns=`repeat(${jogScale==='coarse'?7:9},minmax(0,1fr))`;zBar.querySelector('div').style.gridColumn=jogScale==='coarse'?'4':'5';zBar.querySelectorAll('button').forEach(button=>{const step=Number(button.dataset.lowriderJogStep),n=Math.abs(step);button.style.gridColumn=String(jogScale==='coarse'?(step<0?{'.1':3,'0.1':3,'1':2,'10':1}[n]:{'0.1':5,'1':6,'10':7}[n])||1:(step<0?[25,10,1,.1].indexOf(n)+1:[.1,1,10,25].indexOf(n)+6));});}
     layoutForcedZ();
     const rate = document.getElementById('lowrider-jog-rate');
     if(rate&&document.activeElement!==rate){const effective=controlStatus?.gcode_move?effectiveJogPercent('X',0,controlStatus):jogSpeed;const text=effective<jogSpeed?`${effective}% (${jogSpeed}%)`:`${jogSpeed}%`;if(rate.value!==text)rate.value=text;}
@@ -297,7 +306,7 @@
     pad.setAttribute('role', 'group'); pad.setAttribute('aria-label', 'CNC jog controls');
     pad.style.cssText = 'display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:0px repeat(7,32px) 0px;gap:3px;margin:0';
     const label = (text, column) => {
-      const item = document.createElement('div'); item.textContent = text;
+      const item = document.createElement('div'); item.textContent = text;item.id='pendant-old-xy-label';
       item.style.cssText = `grid-column:${column};grid-row:5;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px`;
       pad.append(item);
     };
@@ -452,7 +461,7 @@
     return '';
   }
   function updateAvailability() {
-    document.querySelectorAll('.macrogroup_lowrider-zero_panel .v-card__text button, .macrogroup_lowrider-homing_panel .v-card__text button, button[data-lowrider-shake], button[data-lowrider-jog-axis]').forEach(button => {
+    document.querySelectorAll('.macrogroup_lowrider-zero_panel .v-card__text button, .macrogroup_lowrider-homing_panel .v-card__text button, button[data-lowrider-shake], button[data-lowrider-jog-axis], button[data-lowrider-disable-steppers]').forEach(button => {
       const reason = controlUnavailable(button, controlStatus);
       button.disabled = !!reason;
       if (reason) {
@@ -480,7 +489,7 @@
     notice.textContent = message;
   }
   document.addEventListener('click', event => {
-    const button = event.target.closest?.('.macrogroup_lowrider-homing_panel button, button[data-lowrider-shake]');
+    const button = event.target.closest?.('.macrogroup_lowrider-homing_panel button, button[data-lowrider-shake], button[data-lowrider-disable-steppers]');
     const shake = button?.dataset?.lowriderShake;
     const disable = button?.hasAttribute('data-lowrider-disable-steppers');
     if (disable) {
@@ -662,7 +671,7 @@
     const ready=status?.webhooks?.state==='ready';
     const paused=!!status?.pause_resume?.is_paused||status?.print_stats?.state==='paused';
     const running=status?.print_stats?.state==='printing';
-    const home=document.getElementById('lowrider-home-dialog');if(home)home.disabled=!ready||running||paused||homingPending||status?.idle_timeout?.state==='Printing';
+    const home=document.getElementById('lowrider-home-dialog');if(home){home.disabled=!ready||running||paused||homingPending||status?.idle_timeout?.state==='Printing';home.setAttribute('aria-disabled',String(home.disabled));home.toggleAttribute('data-lowrider-unavailable',home.disabled);home.title=home.disabled?'Homing is unavailable while busy or disconnected':'Open homing controls';}
     const pause=document.getElementById('lowrider-pause-resume');
     if(pause){pause.disabled=!ready||(!paused&&!running);const text=paused?'Resume':'Pause';if(pause.textContent!==text)pause.textContent=text;pause.style.backgroundColor=paused?'#b26a00':'#1976d2';}
     const label=document.getElementById('lowrider-job-state');if(label){const text=paused?'Paused':running?'Running':'Idle';if(label.textContent!==text)label.textContent=text;}
@@ -696,10 +705,10 @@
     }
     const homingHeading=toolhead.querySelector('.lowrider-homing-heading');if(homingHeading)homingHeading.style.display='none';
     const zBar=document.getElementById('lowrider-horizontal-z'),factor=document.getElementById('lowrider-feed-factor'),endstops=document.getElementById('lowrider-endstops');
-    if(zBar&&factor&&factor.previousElementSibling!==zBar)zBar.after(factor);
+    if(!document.getElementById('pendant-jog-zone')&&zBar&&factor&&factor.previousElementSibling!==zBar)zBar.after(factor);
     const timeoutRow=document.getElementById('lowrider-stepper-timeout-row');
-    if(factor&&timeoutRow&&timeoutRow.previousElementSibling!==factor)factor.after(timeoutRow);
-    const endstopAnchor=timeoutRow||factor;if(endstopAnchor&&endstops&&endstops.previousElementSibling!==endstopAnchor)endstopAnchor.after(endstops);
+    if(!document.getElementById('pendant-jog-zone')&&factor&&timeoutRow&&timeoutRow.previousElementSibling!==factor)factor.after(timeoutRow);
+    const endstopAnchor=timeoutRow||factor;if(!document.getElementById('pendant-jog-zone')&&endstopAnchor&&endstops&&endstops.previousElementSibling!==endstopAnchor)endstopAnchor.after(endstops);
     if(!document.getElementById('lowrider-active-controls')){
       const box=document.createElement('div');box.id='lowrider-active-controls';box.style.cssText='grid-column:5/span 3;grid-row:6/span 3;display:flex;flex-direction:column;justify-content:center;gap:4px';
       const create=(id,text)=>{const b=document.createElement('button');b.id=id;b.type='button';b.textContent=text;b.className='lowrider-active-button';b.style.cssText='min-height:28px;color:white;background:#202020;border:1px solid #777;border-radius:4px;font-size:12px';box.append(b);return b;};
@@ -1144,7 +1153,7 @@
       const endstopDisplay = document.getElementById('lowrider-endstops');
       const travel = document.getElementById('lowrider-work-travel');
       const jogPad = document.getElementById('lowrider-jog-pad');
-      if (jogPad && endstopDisplay && endstopDisplay.previousElementSibling?.id !== (document.getElementById('lowrider-stepper-timeout-row')?'lowrider-stepper-timeout-row':document.getElementById('lowrider-feed-factor')?'lowrider-feed-factor':'lowrider-horizontal-z')) {
+      if (!document.getElementById('pendant-jog-zone') && jogPad && endstopDisplay && endstopDisplay.previousElementSibling?.id !== (document.getElementById('lowrider-stepper-timeout-row')?'lowrider-stepper-timeout-row':document.getElementById('lowrider-feed-factor')?'lowrider-feed-factor':'lowrider-horizontal-z')) {
         endstopDisplay.style.cssText = 'margin:8px 0;min-width:0';
         const grid = endstopDisplay.children[1];
         grid.style.gap = '3px';
@@ -1170,7 +1179,7 @@
           button.classList.add('lowrider-common-button');
         }
       });
-      if (jogPad && homing && homing.parentElement !== jogPad) {
+      if (!document.getElementById('pendant-jog-zone') && jogPad && homing && homing.parentElement !== jogPad) {
         homing.style.cssText = 'grid-column:5/span 3;grid-row:1/span 4;align-self:center;margin:0!important;box-shadow:none;border-radius:0;background:transparent';
         const toolbar = homing.querySelector('.panel-toolbar');
         if (toolbar) toolbar.style.display = 'none';
