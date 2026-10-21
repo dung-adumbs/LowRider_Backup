@@ -28,3 +28,24 @@
 #app #pendant-actions>button{min-height:34px!important;font-size:11px!important;grid-column:auto!important;padding:2px!important}
 #pendant-actions>div{min-width:0!important;align-self:center}#pendant-actions>div button{min-width:0!important;font-size:10px!important;padding:2px!important;min-height:30px!important}
 .pendant-tabs{grid-template-columns:repeat(6,minmax(0,1fr))}.pendant-tabs [data-lowrider-disable-steppers]{border:1px solid #a65c5c!important;background:#342323!important;color:#efc3c3!important;font-size:10px!important;white-space:normal}
+/* Setup / running / paused pendant views */
+.pendant-header #pendant-estop{grid-column:1;grid-row:1;justify-self:start}.pendant-header>a{grid-column:2;grid-row:1;justify-self:center}.pendant-header #pendant-fullscreen{grid-column:3;grid-row:1}
+#app #lowrider-scale-toggle{background:#f0f0ec!important;color:#171717!important;border:1px solid #fff!important}
+#app #lowrider-jog-pad button[data-lowrider-jog-step^="-"]:not(:disabled):not([data-pendant-forced]){background:#264b36!important;border-color:#678f70!important;color:#c5ebcd!important}
+#app #lowrider-jog-pad button[data-below-safe=true]:not(:disabled):not([data-pendant-forced]){background:#594b22!important;border-color:#af9442!important;color:#ffe293!important}
+#pendant-running-job,#pendant-paused-note,#pendant-abort-job{display:none}
+#app[data-job-mode=running] #pendant-running-job{display:flex;flex-direction:column;gap:10px;background:#192b36;border:1px solid #3c596b;border-radius:7px;padding:16px;margin-bottom:8px}
+#pendant-running-job h2{font-size:16px;margin:0;color:#9ed4fa}#pendant-job-file{font-size:13px;overflow-wrap:anywhere}#pendant-job-percent{font-size:42px;text-align:center}#pendant-job-progress{width:100%;height:16px;accent-color:#41a3dd}#pendant-job-elapsed,#pendant-job-remaining{font-size:12px;text-align:center;color:#ccc}#pendant-running-pause{background:#1976d2;min-height:64px;font-size:22px;font-weight:bold;margin-top:10px}
+#app[data-job-mode=running] #pendant-jog-zone,#app[data-job-mode=running] .pendant-jog-settings,#app[data-job-mode=running] #pendant-safety-strip{display:none!important}
+#app[data-job-mode=running] #pendant-actions{grid-template-columns:1fr 1fr}#app[data-job-mode=running] #pendant-actions>#lowrider-home-dialog,#app[data-job-mode=running] #pendant-actions>#lowrider-grid-zero,#app[data-job-mode=running] #pendant-actions>#lowrider-pause-resume{display:none!important}
+#app[data-job-mode=paused] #pendant-paused-note{display:block;color:#ffe293;background:#53431c;border:1px solid #a68a39;border-radius:4px;text-align:center;padding:5px;font-size:12px}
+#app[data-job-mode=paused] #pendant-abort-job,#app[data-job-mode=running] #pendant-abort-job{display:block;background:#762d2d!important;color:white;min-height:34px}
+#app[data-job-mode=paused] #pendant-actions{grid-template-columns:.8fr .85fr 1fr 2.3fr}#app[data-job-mode=paused] #pendant-abort-job{grid-column:1/-1!important}
+/* Matching compact speed controls */
+#app #lowrider-feed-factor,.pendant-jog-settings>[role=group]{display:grid!important;grid-template-columns:70px 26px 76px 26px 32px 34px 32px!important;width:max-content!important;max-width:100%!important;margin:3px auto!important;gap:3px!important;padding:3px 0!important;align-items:center}
+#app #lowrider-feed-factor>span{grid-column:1!important;grid-row:1!important;text-align:right;font-size:10px!important;padding-right:3px}
+#app #lowrider-feed-factor input,.pendant-jog-settings #lowrider-jog-rate{width:76px!important;box-sizing:border-box!important;height:29px!important;text-align:center!important;font-size:12px!important;grid-column:3!important;grid-row:1!important;padding:2px!important}
+#app #lowrider-feed-factor button{min-height:29px!important;padding:1px!important;font-size:10px!important;grid-row:1!important}
+#app #lowrider-feed-factor [data-lowrider-run-action=minus]{grid-column:2!important}#app #lowrider-feed-factor [data-lowrider-run-action=plus]{grid-column:4!important}#app #lowrider-feed-factor [data-lowrider-run-action=min]{grid-column:5!important}#app #lowrider-feed-factor [data-lowrider-run-action=half]{grid-column:6!important}#app #lowrider-feed-factor [data-lowrider-run-action=max]{grid-column:7!important}
+.pendant-jog-settings #lowrider-jog-caption{text-align:right;padding-right:3px}
+@media(max-width:340px){#app #lowrider-feed-factor,.pendant-jog-settings>[role=group]{grid-template-columns:63px 24px 65px 24px 29px 32px 29px!important;gap:2px!important}#app #lowrider-feed-factor input,.pendant-jog-settings #lowrider-jog-rate{width:65px!important}}

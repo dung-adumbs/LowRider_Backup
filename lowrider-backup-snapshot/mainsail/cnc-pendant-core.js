@@ -86,11 +86,11 @@
   function layoutPendantZ(bar){
     const forced=forcedAxis('Z'),fine=jogScale==='fine'&&!forced;
     bar.style.gridTemplateColumns='minmax(0,1fr) 18px minmax(0,1fr)';
-    bar.style.gridTemplateRows=`repeat(${fine?4:3},minmax(0,1fr))`;
-    bar.style.gridRow=`6 / span ${fine?4:3}`;
+    bar.style.gridTemplateRows='repeat(3,minmax(0,1fr))';
+    bar.style.gridRow='6 / span 3';
     const label=bar.querySelector('div');label.style.gridColumn='2';label.style.gridRow='1 / -1';
     bar.querySelectorAll('button').forEach(b=>{const step=Number(b.dataset.lowriderJogStep),n=Math.abs(step);b.style.gridColumn=step<0?'1':'3';b.style.gridRow=String(forced?({1:1,10:2,25:3}[n]||1):({'0.1':1,1:2,10:3,25:4}[n]||1));});
-    document.getElementById('lowrider-jog-pad').dataset.pendantFine=String(fine);
+    document.getElementById('lowrider-jog-pad').dataset.pendantFine='false';
   }
   function layoutForcedZ(){
     const bar=document.getElementById('lowrider-horizontal-z');if(!bar||!forcedAxis('Z'))return;if(bar.dataset.pendantQuadrant){layoutPendantZ(bar);return;}
@@ -112,7 +112,7 @@
   const forceStyle=document.createElement('style');forceStyle.textContent='@keyframes cncForceFlash{50%{filter:brightness(.55)}}.lowrider-force-flash:not(:disabled){animation:cncForceFlash .7s infinite}.lowrider-forced-panel{outline:3px solid #ff1744;outline-offset:2px}';document.head.append(forceStyle);
   function jogSpec(axis, step, scale) {
     const sign = Math.sign(step), size = Math.abs(step);
-    if (scale === 'fine') return {distance:axis === 'Z' ? step : step / 10};
+    if (scale === 'fine') return axis==='Z'&&size===25?{hidden:true}:{distance:axis === 'Z' ? step : step / 10};
     if (axis !== 'Z') return size === 100 ? {limit:sign > 0 ? 'max' : 'min'} : {distance:sign * (size === 1 ? 10 : 100)};
     if (size === 25) return {hidden:true};
     return size === 10 ? {limit:sign > 0 ? 'max' : 'min'} : {distance:sign * (size === 0.1 ? 10 : 25)};
@@ -252,6 +252,12 @@
     const feed = Number(((axis === 'Z' ? 1500 : 12000) * speed / 100).toFixed(3));
     return { distance, script: `_CLIENT_LINEAR_MOVE ${axis}=${distance} F=${feed}` };
   }
+  function jogBelowSafe(axis,move,status,safe){
+    if(axis!=='Z'||!status?.gcode_move||!status?.toolhead)return false;
+    const gm=status.gcode_move,current=gm.gcode_position[2];
+    const target=move.limit?status.toolhead[move.limit==='min'?'axis_minimum':'axis_maximum'][2]-(gm.position[2]-current):current+move.distance;
+    return target<current&&target<safe;
+  }
   function refreshJogChoices() {
     document.querySelectorAll('[data-lowrider-jog-axis]').forEach(button => {
       const axis = button.dataset.lowriderJogAxis;
@@ -259,6 +265,7 @@
       delete button.dataset.pendantForced;button.classList.remove('lowrider-force-flash');button.style.backgroundColor='#252525';button.style.color='#eee';button.style.fontSize='13px';
       const move = jogSpec(axis, Number(button.dataset.lowriderJogStep), jogScale);
       button.style.display = move.hidden ? 'none' : '';
+      button.dataset.belowSafe=String(jogBelowSafe(axis,move,controlStatus,safeJogZ));
       const text = move.limit ? move.limit === 'max' ? 'Max' : 'Min' : `${move.distance > 0 ? '+' : '−'}${Math.abs(move.distance || 0)}`;
       if(button.dataset.lowriderRenderedLabel!==text){const main=document.createElement('span');main.textContent=text;const sub=document.createElement('sub');sub.textContent=axis;sub.style.cssText='font-size:8px;line-height:0;position:relative;bottom:-.25em;margin-left:2px';button.replaceChildren(main,sub);button.dataset.lowriderRenderedLabel=text;}
       button.title = move.limit ? `${axis} to configured ${move.limit} travel limit` : `${axis} ${move.distance} mm`;
@@ -1049,34 +1056,39 @@
       if(pad&&!document.getElementById('lowrider-feed-factor')){
         const bar=document.createElement('div');bar.id='lowrider-feed-factor';
         bar.style.cssText='display:flex;align-items:center;justify-content:center;width:max-content;max-width:100%;gap:8px;padding:8px 0;margin:4px auto';
-        const caption=document.createElement('span');caption.textContent='Run speed';bar.append(caption);
+        const caption=document.createElement('span');caption.textContent='Run speed %';bar.append(caption);
         const value=document.createElement('input');value.id='lowrider-feed-value';value.type='number';value.min='1';value.step='1';value.inputMode='decimal';value.setAttribute('aria-label','Run speed percent');
         value.style.cssText='width:65px;min-width:0;text-align:center;border:1px solid #777;border-radius:4px;color:inherit;background:#202020;padding:6px;font:inherit';
-        const valueWrap=document.createElement('span');valueWrap.style.cssText='display:flex;align-items:center;gap:3px';valueWrap.append(value,document.createTextNode('%'));
-        value.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();value.blur();}});
-        value.addEventListener('blur',async()=>{
-          const percent=Number(value.value);
-          if(!value.value.trim()||!Number.isFinite(percent)||percent<1){homingNotice('Enter a run speed of 1% or greater.');value.value=String(Math.round((controlStatus?.gcode_move?.speed_factor||1)*100));return;}
+        value.max='300';
+        async function applyRunSpeed(percent){
+          const response=await fetch('/printer/objects/query?webhooks',{cache:'no-store'});const state=(await response.json()).result?.status;
+          if(!response.ok||state?.webhooks?.state!=='ready')throw Error('Klipper is not ready');
           value.dataset.saving='true';
-          try{
-            const response=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:`M220 S${percent}`})});
-            const result=await response.json();if(!response.ok||result.error)throw Error(result.error?.message||'Run speed failed');
-          }catch(error){homingNotice(error.message);}finally{value.dataset.saving='false';}
-        });
-        for(const delta of [-10,10]){
-          const button=document.createElement('button');button.type='button';button.textContent=delta<0?'−10%':'+10%';button.className='lowrider-console-button';
+          try{const sent=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:`M220 S${percent}`})});const result=await sent.json();if(!sent.ok||result.error)throw Error(result.error?.message||'Run speed failed');value.value=String(percent);}
+          finally{value.dataset.saving='false';}
+        }
+        function requestRunSpeed(percent){
+          if(!Number.isFinite(percent)||percent<1||percent>300){homingNotice('Enter a run speed from 1% to 300%.');value.value=String(Math.round((controlStatus?.gcode_move?.speed_factor||1)*100));return;}
+          if(percent===300){
+            value.value=String(Math.round((controlStatus?.gcode_move?.speed_factor||1)*100));
+            const modal=cncDialog('Set maximum Run speed?');const note=document.createElement('p');note.textContent='Set Run speed to 300%? This requests three times the programmed feed rate, subject to machine limits. Check the cutter, material and workholding before increasing it.';modal.dialog.append(note);
+            modal.add('Set 300%',async()=>{modal.dialog.close();try{await applyRunSpeed(percent);}catch(error){homingNotice(error.message);}},'#b26a00');modal.add('Cancel',()=>modal.dialog.close());modal.open();
+          }else applyRunSpeed(percent).catch(error=>homingNotice(error.message));
+        }
+        value.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();value.blur();}});
+        value.addEventListener('blur',()=>requestRunSpeed(value.value.trim()?Number(value.value):NaN));
+        const buttons={};
+        for(const [action,label] of [['minus','▼'],['plus','▲'],['min','Min'],['half','50%'],['max','Max']]){
+          const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.lowriderRunAction=action;
+          button.setAttribute('aria-label',`${action==='minus'?'Decrease':action==='plus'?'Increase':action==='min'?'Minimum':action==='half'?'50 percent':'Maximum'} run speed`);
+          button.title=action==='max'?'300% — confirmation required':action==='min'?'1%':action==='half'?'50%':`${action==='minus'?'Decrease':'Increase'} by 1 percentage point`;
           button.addEventListener('click',async()=>{
             button.disabled=true;
-            try{
-              const response=await fetch('/printer/objects/query?gcode_move&webhooks',{cache:'no-store'});const state=(await response.json()).result?.status;
-              if(!response.ok||state?.webhooks.state!=='ready')throw Error('Klipper is not ready');
-              const percent=Math.max(1,Math.round(state.gcode_move.speed_factor*100)+delta);
-              const sent=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:`M220 S${percent}`})});
-              const result=await sent.json();if(!sent.ok||result.error)throw Error(result.error?.message||'Run speed failed');value.value=String(percent);
-            }catch(error){homingNotice(error.message);}finally{button.disabled=false;}
-          });
-          bar.append(button);if(delta<0)bar.append(valueWrap);
+            try{const response=await fetch('/printer/objects/query?gcode_move&webhooks',{cache:'no-store'});const state=(await response.json()).result?.status;if(!response.ok||state?.webhooks?.state!=='ready')throw Error('Klipper is not ready');const current=Math.round(state.gcode_move.speed_factor*100);requestRunSpeed(action==='min'?1:action==='half'?50:action==='max'?300:Math.max(1,Math.min(300,current+(action==='minus'?-1:1))));}
+            catch(error){homingNotice(error.message);}finally{button.disabled=false;}
+          });buttons[action]=button;
         }
+        bar.append(buttons.minus,value,buttons.plus,buttons.min,buttons.half,buttons.max);
         const endstops=document.getElementById('lowrider-endstops');(endstops||document.getElementById('lowrider-horizontal-z')||pad).after(bar);
       }
       const title = toolhead.querySelector('.panel-toolbar .subheading');

@@ -23,7 +23,7 @@
       const input=$(`[data-native-axis="${a}"]`);if(s?.gcode_move&&input)input.value=Number(s.gcode_move.gcode_position[i]).toFixed(a==='Z'?3:2);
       const machine=$('#machine-'+a);if(machine&&s?.gcode_move)machine.textContent='[ '+Number(s.gcode_move.position[i]).toFixed(a==='Z'?3:2)+' ]';
       const range=$('#lowrider-range-'+i);if(range&&s?.gcode_move&&s?.toolhead){const offset=s.gcode_move.position[i]-s.gcode_move.gcode_position[i];const text=s.toolhead.homed_axes.includes(a.toLowerCase())?(s.toolhead.axis_minimum[i]-offset).toFixed(2)+' to '+(s.toolhead.axis_maximum[i]-offset).toFixed(2):'Home '+a+' first';if(range.textContent!==text)range.textContent=text;}
-    }queueFit();
+    }renderJobView(s);queueFit();
   });
   async function homeEndstops(dialog){
     if(dialog.dataset.endstopsRequested)return;dialog.dataset.endstopsRequested='true';const row=el('div',undefined,'pendant-endstop-row');row.append(el('span','Endstops'));const switches=el('div',undefined,'switches');row.append(switches);const names=[['X','stepper_x'],['Y','stepper_y'],['Y1','y1'],['Z','stepper_z'],['Z1','z1']];const tiles=names.map(([name])=>{const e=el('span',name);e.setAttribute('role','status');e.style.background='#555';e.title='Reading';switches.append(e);return e;});dialog.querySelector('h3')?.after(row);
@@ -33,6 +33,26 @@
     const b=event.target.closest?.('[data-lowrider-disable-steppers]');if(!b)return;if(b.dataset.pendantConfirmed){delete b.dataset.pendantConfirmed;return;}
     event.preventDefault();event.stopImmediatePropagation();const m=modal('Disable steppers?');m.dialog.querySelector('.dialog-actions button').textContent='Cancel';m.insert(el('p','This releases motor holding torque. The gantry may shift or drop, and axes will need homing again. Continue?'));m.add('Yes, disable steppers',async()=>{await idle();m.dialog.close();b.dataset.pendantConfirmed='true';b.click();});
   },true);
+  function jobViewState(s){
+    const ready=s?.webhooks?.state==='ready',paused=!!s?.pause_resume?.is_paused||s?.print_stats?.state==='paused';
+    const running=!paused&&(s?.print_stats?.state==='printing'||!!s?.virtual_sdcard?.is_active);
+    const progress=Number(s?.virtual_sdcard?.progress),seconds=Number(s?.print_stats?.print_duration);
+    return {mode:!ready?'disconnected':paused?'paused':running?'running':'setup',progress:Number.isFinite(progress)?Math.max(0,Math.min(1,progress)):0,seconds:Number.isFinite(seconds)?Math.max(0,seconds):0};
+  }
+  function renderJobView(s){
+    const card=$('#pendant-running-job');if(!card)return;
+    const state=jobViewState(s),app=$('#app');app.dataset.jobMode=state.mode;
+    const text=(id,value)=>{const node=$(id);if(node&&node.textContent!==value)node.textContent=value;};
+    text('#pendant-job-title',state.mode==='paused'?'JOB PAUSED — jogging available':'JOB RUNNING');
+    text('#pendant-job-file',s?.print_stats?.filename||'No file selected');
+    const pct=Math.round(state.progress*100);text('#pendant-job-percent',pct+'%');$('#pendant-job-progress').value=state.progress;
+    const duration=n=>{const minutes=Math.floor(n/60);return `${Math.floor(minutes/60)}h ${minutes%60}m`;};
+    text('#pendant-job-elapsed','Cutting time: '+duration(state.seconds));
+    text('#pendant-job-remaining',state.progress>.02&&state.seconds>0?'Est. remaining: '+duration(state.seconds*(1-state.progress)/state.progress):'Remaining time: estimating…');
+    const original=$('#lowrider-pause-resume'),pause=$('#pendant-running-pause');pause.disabled=state.mode!=='running'||!!original?.disabled;
+    const abort=$('[data-lowrider-job-action="abort"]');$('#pendant-abort-job').disabled=!['running','paused'].includes(state.mode)||!abort||abort.disabled;
+    text('#pendant-paused-note','Paused — jog to inspect or change tools, then Resume.');
+  }
   function arrangePendant(){
     if($('#pendant-jog-zone'))return;
     const pad=$('#lowrider-jog-pad'),z=$('#lowrider-horizontal-z'),scale=$('#lowrider-scale-toggle'),safe=$('#lowrider-z5-controls'),active=$('#lowrider-active-controls'),home=$('#lowrider-home-dialog'),timeout=$('#lowrider-stepper-timeout-row');
@@ -48,7 +68,19 @@
     const auxiliary=$('#pendant-auxiliary');auxiliary.append($('.macrogroup_lowrider-homing_panel'),timeout);
     const disable=$('[data-lowrider-disable-steppers]');disable.textContent='Steppers';disable.setAttribute('aria-label','Disable Steppers');$('.pendant-tabs').append(disable);
     actions.after($('#lowrider-feed-factor'));
-    queueFit();
+    const body=$('.panel-body'),toolbar=body.querySelector('.panel-toolbar'),positions=body.querySelector('.positions'),feed=$('#lowrider-feed-factor');
+    const job=el('section');job.id='pendant-running-job';job.setAttribute('aria-label','Current CNC job');
+    job.append(el('h2','JOB RUNNING'));job.firstChild.id='pendant-job-title';
+    const filename=el('div');filename.id='pendant-job-file';job.append(filename);
+    const percent=el('strong','0%');percent.id='pendant-job-percent';job.append(percent);
+    const progress=el('progress');progress.id='pendant-job-progress';progress.max=1;progress.value=0;progress.setAttribute('aria-label','Job progress');job.append(progress);
+    for(const id of ['elapsed','remaining']){const line=el('div');line.id='pendant-job-'+id;job.append(line);}
+    const pause=el('button','Pause job');pause.id='pendant-running-pause';pause.addEventListener('click',()=>$('#lowrider-pause-resume').click());job.append(pause);
+    const paused=el('div');paused.id='pendant-paused-note';
+    const abort=el('button','Abort Job…');abort.id='pendant-abort-job';abort.addEventListener('click',()=>{const original=$('[data-lowrider-job-action="abort"]');if(original&&!original.disabled)original.click();});
+    actions.append(abort);
+    body.prepend(job,paused,zone,toolbar,positions,feed,settings,safety,actions);
+    renderJobView(latest);queueFit();
   }
   const sections={
     async keepouts(){const m=modal('Keep-out areas'),panel=$('#lowrider-keepout-panel');if(panel){panel.style.setProperty('display','block','important');m.insert(panel);}else m.feedback.textContent='Settings are loading; close and try again.';m.dialog.addEventListener('close',()=>{if(panel){panel.style.removeProperty('display');$('.pendant-column').append(panel);}});},
