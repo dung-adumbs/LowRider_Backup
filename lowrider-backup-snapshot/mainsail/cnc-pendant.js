@@ -19,12 +19,19 @@
   window.addEventListener('resize',queueFit);window.visualViewport?.addEventListener('resize',queueFit);
   document.addEventListener('cnc-pendant-status',event=>{
     const s=event.detail;latest=s;const ready=s?.webhooks?.state==='ready';$('#pendant-live-state').textContent=!ready?'Disconnected / controller not ready':(s.print_stats?.state==='paused'?'Paused':s.print_stats?.state==='printing'?'Running':'Ready')+(s.print_stats?.filename?' · '+s.print_stats.filename:'');
-    for(const [i,a] of [...'XYZ'].entries()){
-      const input=$(`[data-native-axis="${a}"]`);if(s?.gcode_move&&input)input.value=Number(s.gcode_move.gcode_position[i]).toFixed(a==='Z'?3:2);
-      const machine=$('#machine-'+a);if(machine&&s?.gcode_move)machine.textContent='[ '+Number(s.gcode_move.position[i]).toFixed(a==='Z'?3:2)+' ]';
-      const range=$('#lowrider-range-'+i);if(range&&s?.gcode_move&&s?.toolhead){const offset=s.gcode_move.position[i]-s.gcode_move.gcode_position[i];const text=s.toolhead.homed_axes.includes(a.toLowerCase())?(s.toolhead.axis_minimum[i]-offset).toFixed(2)+' to '+(s.toolhead.axis_maximum[i]-offset).toFixed(2):'Home '+a+' first';if(range.textContent!==text)range.textContent=text;}
-    }renderJobView(s);queueFit();
+    renderCoordinates(s);renderJobView(s);queueFit();
   });
+  document.documentElement.dataset.coordinateUnit=localStorage.getItem('cnc-coordinate-unit')==='in'?'in':'mm';
+  function renderCoordinates(s){
+    const unit=document.documentElement.dataset.coordinateUnit,factor=unit==='in'?25.4:1;
+    const format=(value,i)=>(value/factor).toFixed(unit==='in'?4:i===2?3:2);const table=$('.positions');if(table)table.setAttribute('aria-label','Spindle coordinates in '+(unit==='in'?'inches':'millimeters'));
+    for(const [i,a] of [...'XYZ'].entries()){
+      const input=$(`[data-native-axis="${a}"]:not([data-lowrider-position])`);if(s?.gcode_move&&input)input.value=format(s.gcode_move.gcode_position[i],i);
+      const range=$('#lowrider-range-'+i),limits=$('#machine-range-'+a);
+      if(s?.gcode_move&&s?.toolhead){const offset=s.gcode_move.position[i]-s.gcode_move.gcode_position[i];const text=s.toolhead.homed_axes.includes(a.toLowerCase())?format(s.toolhead.axis_minimum[i]-offset,i)+' to '+format(s.toolhead.axis_maximum[i]-offset,i):'Home '+a+' first';if(range&&range.textContent!==text)range.textContent=text;const machineText=format(s.toolhead.axis_minimum[i],i)+' to '+format(s.toolhead.axis_maximum[i],i);if(limits&&limits.textContent!==machineText)limits.textContent=machineText;}
+    }
+    const toggle=$('#pendant-coordinate-units');if(toggle){const text='Coordinates · '+unit+' ⇄';if(toggle.textContent!==text)toggle.textContent=text;toggle.setAttribute('aria-label','Coordinate and jog units: '+unit+'. Switch to '+(unit==='mm'?'inches':'millimeters'));}
+  }
   async function homeEndstops(dialog){
     if(dialog.dataset.endstopsRequested)return;dialog.dataset.endstopsRequested='true';const row=el('div',undefined,'pendant-endstop-row');row.append(el('span','Endstops'));const switches=el('div',undefined,'switches');row.append(switches);const names=[['X','stepper_x'],['Y','stepper_y'],['Y1','y1'],['Z','stepper_z'],['Z1','z1']];const tiles=names.map(([name])=>{const e=el('span',name);e.setAttribute('role','status');e.style.background='#555';e.title='Reading';switches.append(e);return e;});dialog.querySelector('h3')?.after(row);
     try{const states=await api('/printer/query_endstops/status');names.forEach(([name,key],i)=>{const value=String(states[key]??'unavailable').toLowerCase();tiles[i].style.background=value==='triggered'?'#b71c1c':value==='open'?'#2e7d32':'#555';tiles[i].title=name+': '+value;tiles[i].setAttribute('aria-label',name+': '+value);});row.title='Snapshot on Home entry. Reopen Home to refresh.';}catch(error){row.title=error.message;tiles.forEach(e=>e.title='Unavailable');}
@@ -80,6 +87,12 @@
     const abort=el('button','Abort Job…');abort.id='pendant-abort-job';abort.addEventListener('click',()=>{const original=$('[data-lowrider-job-action="abort"]');if(original&&!original.disabled)original.click();});
     actions.append(abort);
     body.prepend(job,paused,zone,toolbar,positions,feed,settings,safety,actions);
+    const headings=el('div',undefined,'position-table-heading');headings.setAttribute('role','row');
+    for(const label of ['Machine limits','Machine','Axis','Work','Work limits']){const cell=el('span',label);cell.setAttribute('role','columnheader');headings.append(cell);}positions.prepend(headings);positions.setAttribute('role','table');positions.setAttribute('aria-label','Spindle coordinates in millimeters');
+    for(const row of positions.querySelectorAll('.position-box')){row.setAttribute('role','row');row.querySelector('.v-input').classList.add('work-position-cell');}
+    for(const [i,row] of [...positions.querySelectorAll('.position-box')].entries()){const range=el('div','Reading…','machine-range');range.id='machine-range-'+'XYZ'[i];row.prepend(range);}
+    const caption=$('.coordinate-caption');caption.textContent='';const toggle=el('button','Coordinates · mm ⇄');toggle.id='pendant-coordinate-units';toggle.title='Switch coordinate entry and normal jog increments between millimeters and inches. Safe Z settings and speed readouts retain their labeled units.';
+    toggle.addEventListener('click',()=>{document.activeElement?.blur();document.documentElement.dataset.coordinateUnit=document.documentElement.dataset.coordinateUnit==='mm'?'in':'mm';localStorage.setItem('cnc-coordinate-unit',document.documentElement.dataset.coordinateUnit);renderCoordinates(latest);document.dispatchEvent(new Event('cnc-coordinate-units'));queueFit();});caption.append(toggle);renderCoordinates(latest);
     renderJobView(latest);queueFit();
   }
   const sections={

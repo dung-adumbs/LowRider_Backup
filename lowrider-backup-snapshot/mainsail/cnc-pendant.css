@@ -49,3 +49,21 @@
 #app #lowrider-feed-factor [data-lowrider-run-action=minus]{grid-column:2!important}#app #lowrider-feed-factor [data-lowrider-run-action=plus]{grid-column:4!important}#app #lowrider-feed-factor [data-lowrider-run-action=min]{grid-column:5!important}#app #lowrider-feed-factor [data-lowrider-run-action=half]{grid-column:6!important}#app #lowrider-feed-factor [data-lowrider-run-action=max]{grid-column:7!important}
 .pendant-jog-settings #lowrider-jog-caption{text-align:right;padding-right:3px}
 @media(max-width:340px){#app #lowrider-feed-factor,.pendant-jog-settings>[role=group]{grid-template-columns:63px 24px 65px 24px 29px 32px 29px!important;gap:2px!important}#app #lowrider-feed-factor input,.pendant-jog-settings #lowrider-jog-rate{width:65px!important}}
+/* CNC coordinate table: axis / work / machine / work travel */
+#app .positions{display:flex;flex-direction:column;gap:3px;margin:3px 0 7px}
+#app .position-table-heading,#app .position-box{display:grid;grid-template-columns:20px minmax(0,1fr) minmax(0,1fr) minmax(0,1.65fr);gap:5px;align-items:center}
+.position-table-heading{font-size:10px;color:#bbb;text-align:center;padding:2px 0}
+#app .position-box .machine-coordinate{display:none!important}
+#app .position-box .v-input{display:contents;border:0;padding:0}
+#app .position-box .v-input label{grid-column:1;grid-row:1;font-size:12px;font-weight:bold;text-align:center}
+#app .position-box .v-input input[data-lowrider-position]{grid-column:2;grid-row:1;width:100%;box-sizing:border-box;min-height:29px!important;height:29px!important;border:1px solid #666;border-radius:4px;padding:2px 4px;font-size:12px;text-align:right;background:#202020}
+#app .position-box .machine-position-entry{grid-column:3;grid-row:1;width:100%;box-sizing:border-box;min-height:29px!important;height:29px!important;border:1px solid #666;border-radius:4px;padding:2px 4px;font-size:12px;text-align:right;background:#202020}
+#app .position-box [id^=lowrider-range-]{grid-column:4;grid-row:1;font-size:10px!important;margin:0!important;white-space:nowrap;line-height:1.2!important;text-align:center!important;color:#ccc}
+/* Symmetric machine / axis / work table with unit selection */
+#app .position-table-heading,#app .position-box{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 18px minmax(0,1fr) minmax(0,1.4fr);gap:4px}
+#app .position-box .machine-range{grid-column:1;grid-row:1;font-size:9px!important;text-align:center;white-space:normal;line-height:1.25;color:#ccc}
+#app .position-box .machine-position-entry{grid-column:2!important;font-size:11px;padding:2px}
+#app .position-box .v-input label{grid-column:3!important}
+#app .position-box .v-input input[data-lowrider-position]{grid-column:4!important;font-size:11px;padding:2px}
+#app .position-box [id^=lowrider-range-]{grid-column:5!important;font-size:9px!important;white-space:normal;line-height:1.25!important}
+.position-table-heading{font-size:9px!important}#pendant-coordinate-units{font-size:10px;min-height:25px;padding:2px 6px;border-color:#91a9b8;color:#d9efff;background:#283640}
