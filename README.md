@@ -5,11 +5,13 @@
 
 **A CNC dashboard built around the way you actually work at the table.**
 
+**Your phone becomes your CNC pendant.**
+
 🧭 Intuitive jogging · 🛡️ Clearance controls · 💡 Integrated lighting · ⏱️ Stepper reminders
 
 **Mainsail 2.17.0 · Klipper + Moonraker · Desktop + Android**
 
-[The controls](#a-workstation-for-the-spindle) · [Safety boundaries](#know-what-the-guards-cover) · [Recovery](#backup-and-recovery)
+[The controls](#a-workstation-for-the-spindle) · [Android pendant](#your-phone-becomes-your-cnc-pendant) · [Safety boundaries](#know-what-the-guards-cover) · [Recovery](#backup-and-recovery)
 
 ![LowRider CNC dashboard](lowrider-backup-docs/screenshots/dashboard.png)
 
@@ -37,6 +39,25 @@ The familiar printer dashboard becomes **Spindle Location**: a compact control s
 
 </td></tr>
 </table>
+
+## Your phone becomes your CNC pendant
+
+Open Mainsail on an **Android phone connected to the machine's network**, and bring the controls to the workpiece. The mobile layout puts **Spindle Location** first: the XY quadrant, horizontal Z row, work-zero dialog, jog speed, clearance lock, light controls, and Pause / Resume stay together in one compact station.
+
+The interface is optimized for a narrow touchscreen: larger touch targets, fewer gaps, compact dialogs, a single Coarse / Fine toggle, and grayed-out unavailable actions. Less-used machine settings and diagnostics sit farther down the dashboard, leaving the spindle controls as the everyday pendant view.
+
+<table>
+<tr><th align="center">Coarse: get into position</th><th align="center">Fine: locate the tool</th></tr>
+<tr><td align="center"><img src="lowrider-backup-docs/screenshots/android-coarse.png" alt="Android-sized Spindle Location panel in coarse mode" width="360"></td><td align="center"><img src="lowrider-backup-docs/screenshots/android-fine.png" alt="Android-sized Spindle Location panel in fine mode with smaller movement increments" width="360"></td></tr>
+</table>
+
+*Responsive browser captures at a 412-pixel phone viewport, cropped to the spindle panel; these show the Android layout rather than a native Android app.*
+
+### Why step buttons instead of a jog wheel?
+
+Klipper plans motion on the host and queues timed steps on the controller, as its [motion architecture documentation](https://www.klipper3d.org/Code_Overview.html#code-flow-of-a-move-command) explains. Our design choice follows from that: a simple scroll-wheel-to-G-code adapter can build a backlog of moves, so stopping the wheel need not stop travel immediately. That makes it a poor fit for the immediate feel expected from a traditional CNC handwheel. A suitable wheel integration would need explicit queue and stopping control; plugging in a wheel alone does not provide that behavior.
+
+This pendant therefore favors **deliberate, bounded step moves** with visible distances and speeds. Repeated normal jog presses can still queue motion; use small steps near the work. The phone is an operating interface, and the **hardware emergency stop remains separate and within reach**.
 
 ## Clearance is part of the controls
 
@@ -102,7 +123,7 @@ This profile is specific to this machine: **X 0–624, Y 0–1020, Z 0–109 mm*
 
 ## Backup and recovery
 
-This private repository keeps the machine configuration separate from the X5SA backups. Official **[Klipper-Backup](https://github.com/Staubgeborener/klipper-backup)** handles the Git history and upload. A small preparation step includes the files outside the normal Klipper config folder:
+This private repository preserves the LowRider's configuration, custom controls, and programs. Official **[Klipper-Backup](https://github.com/Staubgeborener/klipper-backup)** handles the Git history and upload. A small preparation step includes the files outside the normal Klipper config folder:
 
 | Saved component | Why it matters |
 |---|---|
