@@ -17,8 +17,8 @@
   let lightAdjustmentQueue = Promise.resolve();
   let jogRequests=0;
   function queueJog(action) {
-    jogRequests++;document.documentElement.dataset.jogRequests=String(jogRequests);const toggle=document.getElementById('pendant-coordinate-units');if(toggle)toggle.disabled=true;
-    const next = jogQueue.then(action).finally(()=>{jogRequests--;document.documentElement.dataset.jogRequests=String(jogRequests);if(toggle)toggle.disabled=jogRequests>0;});
+    jogRequests++;document.documentElement.dataset.jogRequests=String(jogRequests);updateMotionNotice(controlStatus);const toggle=document.getElementById('pendant-coordinate-units');if(toggle)toggle.disabled=true;
+    const next = jogQueue.then(action).finally(()=>{jogRequests--;document.documentElement.dataset.jogRequests=String(jogRequests);updateMotionNotice(controlStatus);if(toggle)toggle.disabled=jogRequests>0;});
     jogQueue = next.catch(() => {});
     return next;
   }

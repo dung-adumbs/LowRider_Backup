@@ -55,7 +55,7 @@ def main():
         if not src.is_file():
             raise RuntimeError('Unreadable config or broken symlink: ' + str(src))
         checked_copy(src, pathlib.Path('printer_data/config') / rel)
-    for name in ('index.html', 'lowrider-light-controls.js', 'cnc-pendant.html', 'cnc-pendant-core.js', 'cnc-pendant.js', 'cnc-pendant.css', 'cnc-pendant-link.js'):
+    for name in ('index.html', 'lowrider-light-controls.js', 'cnc-pendant.html', 'cnc-pendant-core.js', 'cnc-pendant.js', 'cnc-pendant.css', 'cnc-pendant-link.js', 'cnc-pendant-settings.js', 'cnc-pendant.apk'):
         checked_copy(HOME / 'mainsail' / name, pathlib.Path('mainsail') / name)
     checked_copy(HOME / 'klipper/klippy/extras/cnc_force_jog.py', pathlib.Path('klipper/klippy/extras/cnc_force_jog.py'))
     gcodes = HOME / 'printer_data/gcodes'
@@ -65,7 +65,7 @@ def main():
             continue
         if src.suffix.lower() in ('.gcode', '.gco', '.gc', '.nc', '.ngc', '.tap', '.cnc', '.txt', '.md'):
             checked_copy(src, pathlib.Path('printer_data/gcodes') / relative)
-    for namespace in ('lowrider', 'mainsail'):
+    for namespace in ('lowrider', 'mainsail', 'cnc_pendant'):
         with urllib.request.urlopen('http://127.0.0.1:7125/server/database/item?namespace=' + namespace, timeout=15) as response:
             value = json.load(response)['result']['value']
         if namespace == 'mainsail':
