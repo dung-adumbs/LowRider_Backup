@@ -1,0 +1,1 @@
+OLD MACHINE ORIGIN: these files assume X minimum -12.5 and Y minimum -10. Do not run unchanged after the 2026-10-21 change. Translate machine-origin paths by X+12.5 and Y+10, or restore the appropriate work datum.

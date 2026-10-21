@@ -110,10 +110,11 @@ This private repository keeps the machine configuration separate from the X5SA b
 | Mainsail overlay + loading page | The complete CNC interface |
 | Custom forced-jog controller extension | Constrained unhomed recovery controls |
 | Selected Moonraker database namespaces | Dashboard groups/layout and keep-out areas |
+| G-code programs and subfolders | Current jobs, test programs, and archived toolpaths with their folder names preserved |
 | Versions and SHA-256 manifest | Identify the software revision and verify recovery files |
 | These screenshots and recovery guide | Show the expected result and explain restoration |
 
-The schedule checks **every 15 minutes** and commits only changed content; failed uploads retry on a later check. This is a configuration backup, not a full SD-card image: G-code jobs, videos, logs, network credentials, private keys, and authorization data are excluded. Browser-local choices such as Safe Z and jog cap must be rechecked on a new device.
+The schedule checks **every 15 minutes** and commits only changed content; failed uploads retry on a later check. **G-code files are included**, recursively, along with text/Markdown notes. Archived and quarantined programs retain their directory names: backing them up does not make them suitable for the current machine origin or tool setup. This is a configuration-and-program backup, not a full SD-card image: thumbnails, videos, logs, network credentials, private keys, and authorization data are excluded. Browser-local choices such as Safe Z and jog cap must be rechecked on a new device.
 
 See **[RESTORE.md](RESTORE.md)** for paths, integrity checks, settings import, and backup maintenance. Mainsail upgrades can replace the loading page or change selectors; Klipper upgrades can affect the custom controller extension. Test compatibility before relying on either after an upgrade.
 
