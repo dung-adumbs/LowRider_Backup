@@ -186,9 +186,10 @@ class CNCPreflight:
     async def _start(self,request):return await self._approve_and_run(request,False)
     async def _resume(self,request):return await self._approve_and_run(request,True)
     async def _clear(self,request):
-        if getattr(self,'operation',{}).get('state')=='returning':raise self.server.error('Resume return is in progress',409)
-        s=await self._snapshot()
-        if s.get('print_stats',{}).get('state') in ['printing','paused'] or s.get('pause_resume',{}).get('is_paused'):raise self.server.error('Cannot clear an active or paused job',409)
-        self.generation+=1;self.model=None;self.bounds_cache={};self.job={'state':'empty','message':'Select and stage a file.'};return self.job
+        async with self.action_lock:
+            if getattr(self,'operation',{}).get('state')=='returning':raise self.server.error('Resume return is in progress',409)
+            s=await self._snapshot()
+            if s.get('virtual_sdcard',{}).get('is_active') or s.get('print_stats',{}).get('state') in ['printing','paused'] or s.get('pause_resume',{}).get('is_paused'):raise self.server.error('Cannot clear an active or paused job',409)
+            self.generation+=1;self.model=None;self.bounds_cache={};self.job={'state':'empty','message':'Select and stage a file.'};self.operation={'state':'idle'};return self.job
 
 def load_component(config):return CNCPreflight(config)

@@ -105,7 +105,7 @@
     forcedWasEnabled=enabled;
     const caption=document.getElementById('lowrider-jog-caption');if(caption){const text=enabled?'Homed jog %':'Jog speed %';if(caption.textContent!==text)caption.textContent=text;}
     const pad=document.getElementById('lowrider-jog-pad');if(pad)pad.classList.toggle('lowrider-forced-panel',enabled);
-    const home=document.getElementById('lowrider-home-dialog');if(home){home.textContent=enabled?'Home / Forced':'Home';home.style.backgroundColor=enabled?'#b71c1c':'#1976d2';}
+    const home=document.getElementById('lowrider-home-dialog');if(home){home.textContent=enabled?'Home / Forced':'Home';home.style.backgroundColor=homeButtonColor(status,enabled);home.dataset.allHomed=String(status?.toolhead?.homed_axes==='xyz');}
     let banner=document.getElementById('lowrider-forced-banner');
     if(pad&&!banner){banner=document.createElement('div');banner.id='lowrider-forced-banner';banner.style.cssText='display:none;background:#b71c1c;color:white;font-size:11px;font-weight:bold;text-align:center;padding:6px;margin:4px 0';pad.before(banner);}
     if(banner){banner.style.display=enabled?'block':'none';const missing='XYZ'.split('').filter(a=>!status?.toolhead?.homed_axes?.includes(a.toLowerCase())).join(', ');banner.textContent=`FORCED UNHOMED MOTION: ${missing} — position / limits unknown; 1 mm/s. Yellow motor: Move; red: Hold.`;}
@@ -459,7 +459,7 @@
     if(button.dataset?.lowriderJogAxis&&(forcedSending||status.cnc_force_jog?.busy))return 'Wait for forced motion to finish';
     if(button.dataset?.lowriderJogAxis&&forcedAxis(button.dataset.lowriderJogAxis,status))return forcedUnavailable(button,status);
     if(button.dataset?.lowriderJogAxis){const reason=manualMotionReason(status,true);if(reason)return reason;}
-    else if (homingPending || ['printing', 'paused'].includes(status.print_stats?.state) || status.pause_resume?.is_paused || status.idle_timeout?.state === 'Printing') {
+    else if (homingPending || ['printing', 'paused'].includes(status.print_stats?.state) || status.pause_resume?.is_paused || motionStillQueued(status)) {
       return 'Unavailable while moving, running, or paused';
     }
     const name = button.textContent.trim().replace(/\s+/g, ' ');
@@ -529,6 +529,28 @@
     current.textContent='';current.hidden=true;if(bottom)history.scrollTop=history.scrollHeight;
   }
   document.addEventListener('cnc-command-start',()=>document.querySelectorAll('.lowrider-command-status').forEach(archiveCommandMessage));
+  function homeButtonColor(status,forced){return forced?'#b71c1c':status?.toolhead?.homed_axes==='xyz'?'#2e7d32':'#1976d2';}
+  async function freshHomeStatus(){
+    const response=await fetch('/printer/objects/query?print_stats&pause_resume&idle_timeout&webhooks&toolhead&gcode_move',{cache:'no-store',signal:AbortSignal.timeout(5000)});
+    const status=(await response.json()).result?.status;
+    if(!response.ok||status?.webhooks?.state!=='ready')throw Error('Klipper is not ready.');
+    controlStatus={...controlStatus,...status};updateAvailability();return status;
+  }
+  async function runHomeCommand(command,shake=false){
+    const notify=message=>homingNotice(message,!!shake),action=command.replace(/_/g,' ');
+    if(homingPending){notify('A homing or shake test is already in progress.');return;}
+    homingPending=true;updateAvailability();notify('Checking machine�');
+    try{
+      const state=await freshHomeStatus();
+      if(['printing','paused'].includes(state.print_stats.state)||state.pause_resume?.is_paused||state.virtual_sdcard?.is_active||motionStillQueued(state))throw Error('Homing and shake tests are blocked while moving, running, or paused.');
+      if(!shake){const axes=command==='HOME_ALL'?'xyz':command.slice(5).toLowerCase();if([...axes].every(axis=>state.toolhead.homed_axes.includes(axis)))throw Error('Already homed. Disable steppers first if you intend to re-home.');}
+      notify(`${action} in progress�`);
+      const response=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:command})});
+      const result=await response.json();if(!response.ok||result.error)throw Error(result.error?.message||'Homing command failed.');
+      notify(`${action} complete.`);
+    }catch(error){notify(`Command not completed: ${error.message}`);}
+    finally{homingPending=false;updateAvailability();}
+  }
   document.addEventListener('click', event => {
     const button = event.target.closest?.('.macrogroup_lowrider-homing_panel button, button[data-lowrider-shake], button[data-lowrider-disable-steppers]');
     const shake = button?.dataset?.lowriderShake;
@@ -587,32 +609,7 @@
     }
     no.addEventListener('click', () => dialog.close());
     yes.addEventListener('click', async () => {
-      yes.disabled = true;
-      homingPending = true;
-      dialog.close();
-      notify('Checking machine…');
-      try {
-        const stateResponse = await fetch('/printer/objects/query?print_stats&pause_resume&idle_timeout&webhooks&toolhead', {cache:'no-store',signal:AbortSignal.timeout(5000)});
-        const state = (await stateResponse.json()).result?.status;
-        if (!stateResponse.ok || state?.webhooks?.state !== 'ready') throw new Error('Klipper is not ready.');
-        if (['printing', 'paused'].includes(state.print_stats.state) || state.pause_resume?.is_paused || state.idle_timeout.state === 'Printing') {
-          throw new Error('Homing and shake tests are blocked while the machine is active or a job is paused.');
-        }
-        if (!shake) {
-          const axes = command === 'HOME_ALL' ? 'xyz' : command.slice(5).toLowerCase();
-          if ([...axes].every(axis => state.toolhead.homed_axes.includes(axis))) throw new Error('Already homed. Disable steppers first if you intend to re-home.');
-        }
-        notify(`${action} in progress…`);
-        const response = await fetch('/printer/gcode/script', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:command})});
-        const result = await response.json();
-        if (!response.ok || result.error) throw new Error(result.error?.message || 'Homing command failed.');
-        notify(`${action} complete.`);
-      } catch (error) {
-        notify(`Command not completed: ${error.message}`);
-      } finally {
-        homingPending = false;
-        
-      }
+      yes.disabled=true;dialog.close();await runHomeCommand(command,shake);
     });
     dialog.addEventListener('close', () => { dialog.remove(); button.focus(); });
     buttons.append(no, yes);
@@ -716,9 +713,9 @@
     const ready=status?.webhooks?.state==='ready';
     const paused=!!status?.pause_resume?.is_paused||status?.print_stats?.state==='paused';
     const running=status?.print_stats?.state==='printing';
-    const home=document.getElementById('lowrider-home-dialog');if(home){home.disabled=!ready||running||paused||homingPending||status?.idle_timeout?.state==='Printing';home.setAttribute('aria-disabled',String(home.disabled));home.toggleAttribute('data-lowrider-unavailable',home.disabled);home.title=home.disabled?'Homing is unavailable while busy or disconnected':'Open homing controls';}
+    const home=document.getElementById('lowrider-home-dialog');if(home){home.disabled=!ready||running||paused||homingPending||motionStillQueued(status);home.setAttribute('aria-disabled',String(home.disabled));home.toggleAttribute('data-lowrider-unavailable',home.disabled);home.title=home.disabled?'Homing is unavailable while busy or disconnected':'Open homing controls';}
     const pause=document.getElementById('lowrider-pause-resume');
-    if(pause){pause.hidden=paused;pause.disabled=!ready||(!paused&&!running)||(paused&&(!window.CncPreflight||!window.CncPreflight.canResume()));const text=paused?'Resume':'Pause';if(pause.textContent!==text)pause.textContent=text;pause.style.backgroundColor=paused?'#b26a00':'#1976d2';}
+    if(pause){pause.hidden=true;pause.disabled=!ready||(!paused&&!running)||(paused&&(!window.CncPreflight||!window.CncPreflight.canResume()));const text=paused?'Resume':'Pause';if(pause.textContent!==text)pause.textContent=text;pause.style.backgroundColor=paused?'#b26a00':'#1976d2';}
     const label=document.getElementById('lowrider-job-state');if(label){const text=paused?'Paused':running?'Running':'Idle';if(label.textContent!==text)label.textContent=text;}
     const light=document.getElementById('lowrider-grid-light');
     if(light){light.disabled=!ready;const warning=!!status?.['gcode_macro _LED_IDLE_STATE']?.automatic;const on=(status?.['gcode_macro _LED_IDLE_STATE']?.steady??status?.['led work_lights']?.color_data?.[0]?.[3]??0)>0||!!status?.['gcode_macro LED_BREATHE']?.enabled;light.style.backgroundColor=warning?'#b26a00':on?'#202020':'#2e7d32';const breathing=!!status?.['gcode_macro LED_BREATHE']?.enabled;const brightness=Number(status?.['led work_lights']?.color_data?.[0]?.[3]??status?.['gcode_macro _LED_IDLE_STATE']?.steady??0);const percent=Math.round(Math.max(0,Math.min(1,brightness))*100);const text='Light: '+(!ready?'—':warning?'Idle warning':breathing?'Breathe':percent===0?'Off':percent===100?'Max':percent+'%');if(light.textContent!==text)light.textContent=text;light.setAttribute('aria-label',text);light.setAttribute('aria-pressed',String(on));light.title=warning?'Snooze idle warning for fifteen minutes':on?'Brightness, breathing, or turn off':'Turn work light on at 70%';}
@@ -736,7 +733,7 @@
       const homeGrid=homingPanel.querySelector('.col.text-center');
       if(homeGrid&&!document.getElementById('lowrider-home-dialog')){
         const launch=document.createElement('button');launch.id='lowrider-home-dialog';launch.type='button';launch.textContent='Home…';launch.style.cssText='grid-column:1/-1;order:0;min-height:36px;border:1px solid #777;border-radius:4px;background:#1976d2;color:white;font-size:13px';homeGrid.prepend(launch);
-        launch.addEventListener('click',()=>{const modal=cncDialog('Home axes');const note=document.createElement('p');note.textContent='Homing can reset work zeros. Recheck them before cutting.';modal.dialog.append(note);for(const command of ['HOME_ALL','HOME_X','HOME_Y','HOME_Z']){const original=homingPanel.querySelector(`[data-lowrider-home-command="${command}"]`);if(!original)continue;const b=modal.add(command==='HOME_ALL'?'Home All':command.slice(5),()=>{modal.dialog.close();original.click();},command==='HOME_ALL'?'#1976d2':'#202020');const reason=controlUnavailable(original,controlStatus);b.disabled=!!reason;b.title=reason;}const force=modal.add(forcedEnabled()?'Turn off Forced unhomed motion':'Forced unhomed motion',()=>{modal.dialog.close();if(forcedEnabled())setForcedMode(false);else showForcedWarning();},'#b71c1c');force.disabled=!controlStatus?.cnc_force_jog||(!forcedEnabled()&&controlStatus?.toolhead?.homed_axes==='xyz');modal.add('Cancel',()=>modal.dialog.close());modal.open();});
+        launch.addEventListener('click',async()=>{try{await freshHomeStatus();}catch(error){homingNotice(error.message);return;}const modal=cncDialog('Home axes');const note=document.createElement('p');note.textContent='Homing can reset work zeros. Recheck them before cutting.';modal.dialog.append(note);for(const command of ['HOME_ALL','HOME_X','HOME_Y','HOME_Z']){const original=homingPanel.querySelector(`[data-lowrider-home-command="${command}"]`);if(!original)continue;const b=modal.add(command==='HOME_ALL'?'Home All':command.slice(5),()=>{modal.dialog.close();if(command==='HOME_ALL'||command==='HOME_Z')runHomeCommand(command);else original.click();},command==='HOME_ALL'?'#1976d2':'#202020');const reason=controlUnavailable(original,controlStatus);b.disabled=!!reason;b.title=reason;}const force=modal.add(forcedEnabled()?'Turn off Forced unhomed motion':'Forced unhomed motion',()=>{modal.dialog.close();if(forcedEnabled())setForcedMode(false);else showForcedWarning();},'#b71c1c');force.disabled=!controlStatus?.cnc_force_jog||(!forcedEnabled()&&controlStatus?.toolhead?.homed_axes==='xyz');modal.add('Cancel',()=>modal.dialog.close());modal.open();});
       }
       const launch=document.getElementById('lowrider-home-dialog');
       if(launch&&!document.getElementById('lowrider-quick-homes')){

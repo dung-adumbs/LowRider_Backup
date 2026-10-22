@@ -84,3 +84,17 @@ html[data-settings-error=true] #pendant-live-state::after{content:' · Settings 
 #app #lowrider-jog-pad #pendant-homing-needed[hidden]{display:none!important}
 #pendant-steppers{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}#pendant-steppers small{font-size:8px;line-height:1.15}#pendant-steppers.stepper-energized{background:#532b2b;border-color:#aa7777}#pendant-steppers.stepper-warning{animation:cncForceFlash 1s infinite}
 #app .lowrider-command-status{max-height:155px!important;overflow:visible!important;padding:4px 3px!important}.cnc-current-message{max-height:36px;overflow:auto}.lowrider-command-status details{font-size:10px;color:#bbb}.cnc-message-history{max-height:100px;overflow-y:auto;overscroll-behavior:contain;white-space:pre-wrap;touch-action:pan-y;font-size:11px;line-height:1.5}.cnc-message-history>div{padding:3px;border-bottom:1px solid #444}
+/* The staged file occupies a jog quadrant, with no separate top banner. */
+#app #lowrider-jog-pad #pendant-stage-card{grid-column:1/span 3;grid-row:6/span 3;margin:0!important;padding:3px;display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;min-height:0;overflow:hidden}
+#app #lowrider-jog-pad #pendant-stage-card[hidden]{display:none!important}
+#app #lowrider-jog-pad #pendant-stage-filename{font-size:10px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#app #lowrider-jog-pad #pendant-stage-result{font-size:9px;line-height:1.2;margin:0;max-height:2.4em;overflow:hidden}
+#app #lowrider-jog-pad #pendant-stage-card #pendant-quadrant-resume{min-height:30px!important;font-size:13px!important;flex-shrink:0;align-self:stretch}
+#app #lowrider-jog-pad #pendant-stage-card .preflight-actions button{min-height:20px!important;font-size:10px!important}
+#app #lowrider-jog-pad #pendant-stage-card #pendant-scan-progress{height:5px;margin:0}
+#app[data-job-mode=paused] #pendant-actions{grid-template-columns:.8fr .85fr 3.1fr}
+
+/* Bottom Pause/Resume is an internal proxy only. */
+#app #pendant-actions>#lowrider-pause-resume{display:none!important}
+#app #pendant-actions{grid-template-columns:.8fr .85fr 3.1fr}
+#app[data-job-mode=running] #pendant-actions{grid-template-columns:1fr 1fr}

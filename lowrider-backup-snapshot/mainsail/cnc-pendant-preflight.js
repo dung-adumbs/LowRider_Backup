@@ -12,13 +12,15 @@
   const card=$('#pendant-stage-card');if(!card)return;
   const paused=!!latest?.pause_resume?.is_paused,running=!paused&&latest?.print_stats?.state==='printing';
   card.hidden=running||(!state.filename&&!paused);card.dataset.result=state.state==='scanning'?'pending':state.verification?.approved?'pass':'blocked';
-  text($('#pendant-stage-filename'),state.filename||'No file staged');
-  const message=isReturning()?'Returning to saved position…':state.state==='scanning'?`Scanning ${Math.round((state.progress||0)*100)}% · ${(state.lines||0).toLocaleString()} lines`:state.verification?.reason||state.message||'Stage and verify the paused file.';
+  const filename=$('#pendant-stage-filename');text(filename,state.filename?.split('/').pop()||latest?.print_stats?.filename||'Paused file');filename.title=state.filename||'';
+  const missing=[...'XYZ'].filter(a=>!latest?.toolhead?.homed_axes?.includes(a.toLowerCase()));
+  const message=isReturning()?'Returning to saved position…':state.state==='scanning'?`Scanning ${Math.round((state.progress||0)*100)}%`:missing.length?'Not homed: '+missing.join(', '):state.verification?.approved?(paused?'Travel verified':'Ready to start'):'Verification required';
   text($('#pendant-stage-result'),message);
   const progress=$('#pendant-scan-progress');progress.hidden=state.state!=='scanning';progress.value=state.progress||0;
-  const start=$('#pendant-verified-start');start.hidden=paused;start.disabled=latest?.webhooks?.state!=='ready'||latest?.toolhead?.homed_axes!=='xyz'||busy||state.state!=='analyzed'||!state.verification?.approved||running;
-  const resume=$('#pendant-quadrant-resume');resume.hidden=!paused;resume.disabled=!canResume();
-  text(resume,isReturning()?'Returning…':!busy&&state.state==='scanning'?'Verifying…':'Resume job…');
+  const action=$('#pendant-quadrant-resume'),needsStage=paused&&!state.filename;
+  action.disabled=latest?.webhooks?.state!=='ready'||!!missing.length||busy||running||isReturning()||(!needsStage&&(paused?!canResume():state.state!=='analyzed'||!state.verification?.approved));
+  text(action,isReturning()?'Returning…':state.state==='scanning'?'Verifying…':paused?(needsStage?'Verify paused file…':'Resume job…'):'Start job…');
+  const homing=$('#pendant-homing-needed');if(!card.hidden&&homing)homing.hidden=true;
   const old=$('#lowrider-pause-resume');if(paused&&old)old.disabled=!canResume();
   ui().queueFit();
  }
@@ -26,10 +28,10 @@
   const body=$('.panel-body'),zone=$('#pendant-jog-zone'),pad=$('#lowrider-jog-pad');if(!body||!zone||!pad||$('#pendant-stage-card'))return;
   const card=el('section');card.id='pendant-stage-card';card.hidden=true;card.setAttribute('aria-label','Staged CNC job');
   const filename=el('strong');filename.id='pendant-stage-filename';const result=el('div');result.id='pendant-stage-result';result.setAttribute('role','status');const progress=el('progress');progress.id='pendant-scan-progress';progress.max=1;
-  const controls=el('div',undefined,'preflight-actions'),start=el('button','Start job…');start.id='pendant-verified-start';start.addEventListener('click',startJob);
-  const details=el('button','Verify / details');details.addEventListener('click',detailsDialog);controls.append(start,details);card.append(filename,result,progress,controls);zone.before(card);
-  const resumeButton=el('button','Resume job…');resumeButton.id='pendant-quadrant-resume';resumeButton.addEventListener('click',resume);pad.append(resumeButton);render();
+  const action=el('button','Start job…');action.id='pendant-quadrant-resume';action.addEventListener('click',()=>latest?.pause_resume?.is_paused?resume():startJob());
+  const controls=el('div',undefined,'preflight-actions'),details=el('button','Details');details.addEventListener('click',detailsDialog);controls.append(details);card.append(filename,result,progress,action,controls);pad.append(card);render();
  }
+ async function clearLoadedFile(){if(busy||isReturning())return false;busy=true;render();try{state=await api('clear','POST',{});return true;}catch(error){const m=ui().modal('Cannot clear loaded file');m.insert(el('p',error.message));return false;}finally{busy=false;await refresh();}}
  async function refresh(){if(polling)return state;polling=true;try{state=await api('status');if(state.operation?.state==='complete'||state.operation?.state==='failed')resumePending=false;if(state.operation?.state==='failed'&&state.operation.id!==failedOperation){failedOperation=state.operation.id;const m=ui().modal('Resume stopped — check controller');m.insert(el('p',state.operation.message));}}catch(error){state={...state,state:'unavailable',verification:{approved:false,reason:'Verification service unavailable: '+error.message}};}finally{polling=false;render();}return state;}
  async function stage(filename){busy=true;render();try{state=await api('stage','POST',{filename});}finally{busy=false;render();}await refresh();}
  function verificationText(value){
@@ -73,7 +75,7 @@
  }
  async function startJob(){
   if(busy)return;busy=true;render();try{await refresh();const verified=await api('verify','POST',{});state.verification=verified;if(!verified.approved){await detailsDialog();return;}
-   const captured=state.id,filename=state.filename,m=ui().modal('Start verified CNC job?');m.insert(el('p',filename));m.insert(el('p','Confirm work/tool zero, tool and clamps, clearance and manual router power. Later tool sections must be re-verified with their actual tool zeros.'));m.insert(el('pre',verificationText(verified),'preflight-details'));
+   const captured=state.id,filename=state.filename,m=ui().modal('Start verified CNC job?');m.dialog.querySelector('.dialog-actions button').textContent='Cancel';m.insert(el('p',filename));m.insert(el('p','Confirm work/tool zero, tool and clamps, clearance and manual router power. Later tool sections must be re-verified with their actual tool zeros.'));m.insert(el('pre',verificationText(verified),'preflight-details'));
    m.add('Start job',async()=>{m.dialog.close();busy=true;render();try{await api('start','POST',{stage_id:captured});}catch(error){const failure=ui().modal('Start blocked');failure.insert(el('p',error.message));}finally{busy=false;await refresh();}});
   }catch(error){const m=ui().modal('Start blocked');m.insert(el('p',error.message));}finally{busy=false;render();}
  }
@@ -90,9 +92,10 @@
    }catch(error){if(token===sequence)details.replaceChildren(el('p',error.message));}}
   try{const all=(await ui().api('/server/files/list?root=gcodes')).filter(f=>/\.(gcode|gco|gc|nc|ngc|tap)$/i.test(f.path)).sort((a,b)=>b.modified-a.modified);const renderFiles=()=>{const old=list.value;list.replaceChildren();for(const file of all.filter(f=>f.path.toLowerCase().includes(search.value.toLowerCase()))){const item=el('option',file.path);item.value=file.path;item.disabled=/quarantine|old-machine-origin/i.test(file.path);list.append(item);}if([...list.options].some(o=>o.value===old))list.value=old;inspect();};search.addEventListener('input',renderFiles);list.addEventListener('change',inspect);renderFiles();
    m.add('Stage & verify',async()=>{if(!selected)throw Error('Select a file.');await stage(selected);m.dialog.close();});m.add('View toolpath',()=>{if(!selected)throw Error('Select a file.');viewer(selected);});
+   const clear=m.add('Clear loaded file',async()=>{if(await clearLoadedFile())m.dialog.close();});clear.title='Clear the pendant selection; keep the G-code in Files.';clear.disabled=!state.filename||busy||isReturning()||!!latest?.pause_resume?.is_paused||latest?.print_stats?.state==='printing';
   }catch(error){m.feedback.textContent=error.message;}
  }
  document.addEventListener('cnc-pendant-status',event=>{latest=event.detail;render();});new MutationObserver(mount).observe(document.documentElement,{childList:true,subtree:true});mount();
  async function poll(){await refresh();setTimeout(poll,1500);}poll();
- window.CncPreflight={files,resume,afterZero,canResume,isReturning,refresh};
+ window.CncPreflight={files,resume,afterZero,canResume,isReturning,hasStagedFile:()=>!!state.filename,refresh};
 })();
