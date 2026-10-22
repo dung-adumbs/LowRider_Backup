@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "filename": "r v09-travel-4b4bc9cd7c.gcode",
+  "sha256": "6791621ef891de1ed09df94889b670d9d30b21f362e65940c6dbe8491507effc",
+  "program_body_sha256": "6791621ef891de1ed09df94889b670d9d30b21f362e65940c6dbe8491507effc",
+  "size": 127510,
+  "modified_ns": 1792676490810112428,
+  "scan_seconds": 0.533,
+  "lines": 5128,
+  "moves": 2465,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 1974,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "1-8 single flute upcut MDF",
+      "start": 1985,
+      "end": 14918,
+      "tool_marker": true
+    },
+    {
+      "id": 2,
+      "label": "1-8 single flute upcut MDF",
+      "start": 14929,
+      "end": 29130,
+      "tool_marker": true
+    },
+    {
+      "id": 3,
+      "label": "1-8 single flute upcut MDF",
+      "start": 29141,
+      "end": 127510,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      155.813,
+      83.313,
+      -6.0
+    ],
+    "max": [
+      361.687,
+      387.076,
+      16.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-10-22T13:43:04.137131+00:00"
+}
