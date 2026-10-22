@@ -672,6 +672,7 @@
     } finally { setTimeout(refreshEndstops, 500); }
   }
   async function runCncCommand(script, idleOnly=false) {
+    if(script.trim()==='RESUME'){if(!window.CncPreflight)throw Error('Verification controls are loading.');return window.CncPreflight.resume();}
     const response=await fetch('/printer/objects/query?webhooks&print_stats&pause_resume&virtual_sdcard&idle_timeout&toolhead',{cache:'no-store',signal:AbortSignal.timeout(5000)});
     const status=(await response.json()).result?.status;
     if(!response.ok||status?.webhooks.state!=='ready')throw Error('Klipper is not ready');
@@ -679,6 +680,7 @@
     if(script.startsWith('ZERO_')){const axes=script==='ZERO_ALL'?'xyz':script.slice(5).toLowerCase();if([...axes].some(axis=>!status.toolhead.homed_axes.includes(axis)))throw Error('Home the selected axes before setting work zero');}
     const sent=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script})});
     const result=await sent.json();if(!sent.ok||result.error)throw Error(result.error?.message||'Command failed');
+    if(script==='ZERO_Z'&&isMachinePaused(status)){if(window.CncPreflight)await window.CncPreflight.afterZero();}
     return status;
   }
   function cncDialog(titleText) {
@@ -696,7 +698,7 @@
     const running=status?.print_stats?.state==='printing';
     const home=document.getElementById('lowrider-home-dialog');if(home){home.disabled=!ready||running||paused||homingPending||status?.idle_timeout?.state==='Printing';home.setAttribute('aria-disabled',String(home.disabled));home.toggleAttribute('data-lowrider-unavailable',home.disabled);home.title=home.disabled?'Homing is unavailable while busy or disconnected':'Open homing controls';}
     const pause=document.getElementById('lowrider-pause-resume');
-    if(pause){pause.disabled=!ready||(!paused&&!running);const text=paused?'Resume':'Pause';if(pause.textContent!==text)pause.textContent=text;pause.style.backgroundColor=paused?'#b26a00':'#1976d2';}
+    if(pause){pause.disabled=!ready||(!paused&&!running)||(paused&&(!window.CncPreflight||!window.CncPreflight.canResume()));const text=paused?'Resume':'Pause';if(pause.textContent!==text)pause.textContent=text;pause.style.backgroundColor=paused?'#b26a00':'#1976d2';}
     const label=document.getElementById('lowrider-job-state');if(label){const text=paused?'Paused':running?'Running':'Idle';if(label.textContent!==text)label.textContent=text;}
     const light=document.getElementById('lowrider-grid-light');
     if(light){light.disabled=!ready;const warning=!!status?.['gcode_macro _LED_IDLE_STATE']?.automatic;const on=(status?.['gcode_macro _LED_IDLE_STATE']?.steady??status?.['led work_lights']?.color_data?.[0]?.[3]??0)>0||!!status?.['gcode_macro LED_BREATHE']?.enabled;light.style.backgroundColor=warning?'#b26a00':on?'#202020':'#2e7d32';const breathing=!!status?.['gcode_macro LED_BREATHE']?.enabled;const brightness=Number(status?.['led work_lights']?.color_data?.[0]?.[3]??status?.['gcode_macro _LED_IDLE_STATE']?.steady??0);const percent=Math.round(Math.max(0,Math.min(1,brightness))*100);const text='Light: '+(!ready?'—':warning?'Idle warning':breathing?'Breathe':percent===0?'Off':percent===100?'Max':percent+'%');if(light.textContent!==text)light.textContent=text;light.setAttribute('aria-label',text);light.setAttribute('aria-pressed',String(on));light.title=warning?'Snooze idle warning for fifteen minutes':on?'Brightness, breathing, or turn off':'Turn work light on at 70%';}

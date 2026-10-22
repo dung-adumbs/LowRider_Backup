@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "filename": "4005-P38-1mm-rest-fast-travel-metadata.gcode",
+  "sha256": "f822d01b6068c0f1d3bf4b17d728f21f2ee94e8aed0eb30372b0140f194168bd",
+  "program_body_sha256": "f822d01b6068c0f1d3bf4b17d728f21f2ee94e8aed0eb30372b0140f194168bd",
+  "size": 7759810,
+  "modified_ns": 1792376690530694015,
+  "scan_seconds": 39.626,
+  "lines": 224507,
+  "moves": 224482,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 1022,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "1mm single flute flat - 4.5mm usable flute - conservative 3.175mm shoulder",
+      "start": 1034,
+      "end": 7759810,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      92.257,
+      76.594,
+      -7.373
+    ],
+    "max": [
+      212.295,
+      322.335,
+      5.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "analyzed_at": "2026-10-22T04:24:41.284563+00:00"
+}

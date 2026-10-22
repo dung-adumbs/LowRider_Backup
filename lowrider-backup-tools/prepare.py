@@ -55,9 +55,14 @@ def main():
         if not src.is_file():
             raise RuntimeError('Unreadable config or broken symlink: ' + str(src))
         checked_copy(src, pathlib.Path('printer_data/config') / rel)
-    for name in ('index.html', 'lowrider-light-controls.js', 'cnc-pendant.html', 'cnc-pendant-core.js', 'cnc-pendant.js', 'cnc-pendant.css', 'cnc-pendant-link.js', 'cnc-pendant-settings.js', 'cnc-pendant.apk'):
+    for name in ('index.html', 'lowrider-light-controls.js', 'cnc-pendant.html', 'cnc-pendant-core.js', 'cnc-pendant.js', 'cnc-pendant.css', 'cnc-pendant-link.js', 'cnc-pendant-settings.js', 'cnc-pendant-preflight.js', 'cnc-pendant.apk'):
         checked_copy(HOME / 'mainsail' / name, pathlib.Path('mainsail') / name)
     checked_copy(HOME / 'klipper/klippy/extras/cnc_force_jog.py', pathlib.Path('klipper/klippy/extras/cnc_force_jog.py'))
+    checked_copy(HOME / 'printer_data/config/cnc_preflight_profile.json', pathlib.Path('printer_data/config/cnc_preflight_profile.json'))
+    for name in ('cnc_preflight.py', 'cnc_gcode_scan.py'):
+        checked_copy(HOME / 'moonraker/moonraker/components' / name, pathlib.Path('moonraker/moonraker/components') / name)
+    for src in sorted((HOME / 'printer_data/cnc_preflight').glob('*.json')):
+        checked_copy(src, pathlib.Path('printer_data/cnc_preflight') / src.name)
     gcodes = HOME / 'printer_data/gcodes'
     for src in sorted(gcodes.rglob('*')):
         relative = src.relative_to(gcodes)
