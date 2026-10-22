@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "filename": "RAPID TEST-travel-314a88da9c.gcode",
+  "sha256": "a1cee2afe0ca1abd1e8f0ec7f4ab2fb9bf581111f4319dcea4467e31a9e854eb",
+  "program_body_sha256": "a1cee2afe0ca1abd1e8f0ec7f4ab2fb9bf581111f4319dcea4467e31a9e854eb",
+  "size": 122515,
+  "modified_ns": 1792667006194253797,
+  "scan_seconds": 0.535,
+  "lines": 4994,
+  "moves": 2465,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 1638,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "1-8 single flute upcut MDF",
+      "start": 1649,
+      "end": 13922,
+      "tool_marker": true
+    },
+    {
+      "id": 2,
+      "label": "1-8 single flute upcut MDF",
+      "start": 13933,
+      "end": 27475,
+      "tool_marker": true
+    },
+    {
+      "id": 3,
+      "label": "1-8 single flute upcut MDF",
+      "start": 27486,
+      "end": 122180,
+      "tool_marker": true
+    },
+    {
+      "id": 4,
+      "label": "1-8 single flute upcut MDF",
+      "start": 122191,
+      "end": 122515,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      155.813,
+      83.313,
+      -6.0
+    ],
+    "max": [
+      361.687,
+      387.076,
+      16.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-10-22T11:09:26.949333+00:00"
+}
