@@ -5,7 +5,7 @@
   "program_body_sha256": "6791621ef891de1ed09df94889b670d9d30b21f362e65940c6dbe8491507effc",
   "size": 127510,
   "modified_ns": 1792676490810112428,
-  "scan_seconds": 0.533,
+  "scan_seconds": 0.501,
   "lines": 5128,
   "moves": 2465,
   "sections": [
@@ -57,5 +57,5 @@
   },
   "loops": [],
   "runtime_macros": [],
-  "analyzed_at": "2026-10-22T13:43:04.137131+00:00"
+  "analyzed_at": "2026-10-22T13:47:25.839530+00:00"
 }
