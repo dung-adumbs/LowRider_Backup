@@ -1,7 +1,7 @@
 {
   "belowZ5Cap": 10,
   "jogScale": "coarse",
-  "jogSpeed": 100,
+  "jogSpeed": 50,
   "safeJogZ": 25,
-  "units": "cm"
+  "units": "mm"
 }

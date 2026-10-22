@@ -12,7 +12,7 @@
   "mainsail/lowrider-light-controls.js": "51ac4b542d32d9ea146c97b41a304f484f8765de5fcdf1f4dad80a5f7aac8ace",
   "moonraker/moonraker/components/cnc_gcode_scan.py": "d9f0580fbda0fd77b41ffbeda9bb368611e5961cca30f01765764cdafea14da1",
   "moonraker/moonraker/components/cnc_preflight.py": "51c01666ca15b5b31c08fb0ce6d5939d416cf48a6f0c76ea49050e4bdb597363",
-  "printer_data/cnc_preflight/8192c56ff7dcb31fbfdd0dcacf2c4f048032186741dce931463952f984498d9a.json": "a6e5478645adb8f6b5b10b024dba45f5e0d3dd27fe5f3a7b181031856638cd76",
+  "printer_data/cnc_preflight/8192c56ff7dcb31fbfdd0dcacf2c4f048032186741dce931463952f984498d9a.json": "5ae6faa8dfaad9de22ebba3df6936e60c09914c45e830d0e754110b7c35d4ff6",
   "printer_data/cnc_preflight/e6bd2b09d9bac131a9b1e75fd5f57e55b1834cb7a435c481b993c396ba94c6aa.json": "da703c36f3a3c7ed16b26603d330ada21e5c3da8abe7073060bbb38f6f69b470",
   "printer_data/cnc_preflight/f822d01b6068c0f1d3bf4b17d728f21f2ee94e8aed0eb30372b0140f194168bd.json": "e058b9cb509d636a4be01ff3d61394b8ade42540b497e49e783c9619d22be4d3",
   "printer_data/config/cnc_force_jog.cfg": "84b3dfcbc52d7b0071358bac97a50918c290ee14d8fd7dcfcb8342ceaca9b9fc",
@@ -77,7 +77,7 @@
   "printer_data/gcodes/p38 contour rough.gcode": "84f545c06d58930bfedf08cf32d8c77fdb532664b92f5bbd64dd28d86a6eb029",
   "printer_data/gcodes/p38 t1 1-8EM.gcode": "12c6e9505b5bfb428eee9529a088e2c3358ec52097803edab8f09388a9671fe4",
   "printer_data/gcodes/p38 t2 1-8 ball.gcode": "387deffea232fe73c595c1d4f7fbc61fdae2cf897ed73433e03970ad0dba0d03",
-  "settings/cnc_pendant.json": "78ab6836ac36ac431bb566e4096b122d4985d7a04119e7dbff9fda3355a6f01e",
+  "settings/cnc_pendant.json": "f904a7023d184c11642e4accbc4d3badaf3c7e545f1733d8b6508dd8cb1f1796",
   "settings/lowrider.json": "a9d7c7150a6e2f825452204206d7706897054a7e8cc52d0af03fca1742c55925",
   "settings/mainsail.json": "da3551a5c4d37b8a1078bcbd0bf01f18fd5738506d2586e1811bbc730aeb4778",
   "versions.json": "77ad8a571f84de72500e86e97e3101f0c73989314e695e958c6b310ee8223307"
