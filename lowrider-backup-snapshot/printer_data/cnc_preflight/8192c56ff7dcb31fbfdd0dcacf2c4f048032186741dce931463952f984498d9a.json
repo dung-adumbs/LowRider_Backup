@@ -5,7 +5,7 @@
   "program_body_sha256": "8192c56ff7dcb31fbfdd0dcacf2c4f048032186741dce931463952f984498d9a",
   "size": 5022,
   "modified_ns": 1792458134478077135,
-  "scan_seconds": 0.029,
+  "scan_seconds": 0.06,
   "lines": 203,
   "moves": 182,
   "sections": [
@@ -35,5 +35,5 @@
     "START_JOB",
     "END_JOB"
   ],
-  "analyzed_at": "2026-10-22T07:06:09.165903+00:00"
+  "analyzed_at": "2026-10-22T07:34:14.759882+00:00"
 }

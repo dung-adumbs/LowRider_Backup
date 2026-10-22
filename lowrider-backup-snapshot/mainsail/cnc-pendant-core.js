@@ -138,13 +138,17 @@
     const spec = jogSpec(axis,step,scale);
     if (spec.hidden) throw new Error('Step unavailable in Coarse mode');
     const i = 'XYZ'.indexOf(axis), gm = status.gcode_move;
-    const feed = Number(((axis === 'Z' ? 1500 : 12000) * speed / 100).toFixed(3));
     const target = spec.limit ? status.toolhead[spec.limit === 'max' ? 'axis_maximum' : 'axis_minimum'][i] - (gm.position[i]-gm.gcode_position[i]) : gm.gcode_position[i] + spec.distance;
     const distance = target - gm.gcode_position[i];
-    const amount = Number((spec.limit ? target : distance).toFixed(6));
-    const effective=effectiveJogPercent(axis,target,status,speed);
-    const cappedFeed=Number(((axis==='Z'?1500:12000)*effective/100/Math.max(0.01,gm.speed_factor||1)).toFixed(3));
-    return {distance,target,script:`_CLIENT_LINEAR_MOVE ${axis}=${amount} F=${cappedFeed}${spec.limit ? ' ABSOLUTE=1' : ''}`};
+    return {distance,target,script:jogCommand(axis,target,status,speed)};
+  }
+  function jogCommand(axis,target,status,selected=jogSpeed) {
+    const gm=status.gcode_move,z=gm.gcode_position[2],base=axis==='Z'?1500:12000;
+    const command=(value,percent)=>`_CLIENT_LINEAR_MOVE ${axis}=${Number(value.toFixed(6))} F=${Number((base*percent/100/Math.max(.01,gm.speed_factor||1)).toFixed(3))} ABSOLUTE=1`;
+    if(axis==='Z'&&z<safeJogZ&&target>safeJogZ){
+      return command(safeJogZ,Math.min(selected,belowZ5Cap))+'\n'+command(target,selected);
+    }
+    return command(target,effectiveJogPercent(axis,target,status,selected));
   }
   function effectiveJogPercent(axis,target,status,selected=jogSpeed) {
     if(!status.toolhead.homed_axes.includes('z'))return forcedEnabled(status)?Math.min(selected,belowZ5Cap):selected;
@@ -260,19 +264,22 @@
     const feed = Number(((axis === 'Z' ? 1500 : 12000) * speed / 100).toFixed(3));
     return { distance, script: `_CLIENT_LINEAR_MOVE ${axis}=${distance} F=${feed}` };
   }
-  function runSpeedPreset(percent){return percent>=100?50:100;}
+  function runSpeedPreset(percent){return percent<=60?50:100;}
   function refreshRunSpeedPreset(percent){
     const button=document.querySelector('[data-lowrider-run-action="half"]');if(!button)return;
     const target=runSpeedPreset(percent),label=target+'%';if(button.textContent!==label)button.textContent=label;
-    button.setAttribute('aria-label',target+' percent run speed');button.title=target===50?'Slow to 50%':'Return to normal 100%';
+    button.setAttribute('aria-label',target+' percent run speed');button.title='Set Run speed to '+target+'%';
   }
   function jogBelowSafe(axis,move,status,safe){
-    if(axis!=='Z'||!status?.gcode_move||!status?.toolhead)return false;
+    if(!status?.gcode_move||!status?.toolhead)return false;
     const gm=status.gcode_move,current=gm.gcode_position[2];
+    if(axis!=='Z')return status.toolhead.homed_axes?.includes('z')&&current<safe;
     const target=move.limit?status.toolhead[move.limit==='min'?'axis_minimum':'axis_maximum'][2]-(gm.position[2]-current):current+move.distance;
     return target<current&&target<safe;
   }
   function refreshJogChoices() {
+    const below=!!controlStatus?.toolhead?.homed_axes?.includes('z')&&controlStatus?.gcode_move?.gcode_position?.[2]<safeJogZ;
+    document.querySelectorAll('[data-lowrider-position],[data-machine-position]').forEach(input=>{input.dataset.belowSafe=String(below);});
     document.querySelectorAll('[data-lowrider-jog-axis]').forEach(button => {
       const axis = button.dataset.lowriderJogAxis;
       if(forcedAxis(axis)){renderForcedButton(button,axis,Number(button.dataset.lowriderJogStep));return;}
@@ -439,6 +446,7 @@
     return tool.print_time+0.05>tool.estimated_print_time;
   }
   function manualMotionReason(status, allowQueuedJog=false) {
+    if(globalThis.window?.CncPreflight?.isReturning?.())return 'Wait for the Resume return to finish';
     if(window.CncSettings&&!window.CncSettings.ready)return 'Loading shared machine settings';if(status?.webhooks?.state!=='ready')return 'Klipper is not ready';
     if(homingPending||(!allowQueuedJog&&motionStillQueued(status)))return 'Wait for motion or the pause lift to finish';
     if(status.virtual_sdcard?.is_active)return 'Pause the running file before jogging or setting tool zero';
@@ -507,8 +515,20 @@
       notice.style.cssText = 'padding:8px 16px;font-size:13px';
       panel.append(notice);
     }
-    notice.textContent = message;
+    if(!notice.querySelector('.cnc-current-message')){
+      notice.replaceChildren();const current=document.createElement('div');current.className='cnc-current-message';
+      const details=document.createElement('details'),summary=document.createElement('summary'),history=document.createElement('div');
+      summary.textContent='Message history';history.className='cnc-message-history';history.setAttribute('aria-label','Command message history');details.append(summary,history);details.hidden=true;notice.append(current,details);
+    }
+    archiveCommandMessage(notice);const current=notice.querySelector('.cnc-current-message');current.textContent=message;current.hidden=!message;
   }
+  function archiveCommandMessage(notice){
+    const current=notice.querySelector('.cnc-current-message'),history=notice.querySelector('.cnc-message-history');if(!current?.textContent||!history)return;
+    const bottom=history.scrollTop+history.clientHeight>=history.scrollHeight-20;
+    const entry=document.createElement('div');entry.textContent=new Date().toLocaleTimeString()+' · '+current.textContent;history.append(entry);while(history.children.length>100)history.firstChild.remove();history.parentElement.hidden=false;
+    current.textContent='';current.hidden=true;if(bottom)history.scrollTop=history.scrollHeight;
+  }
+  document.addEventListener('cnc-command-start',()=>document.querySelectorAll('.lowrider-command-status').forEach(archiveCommandMessage));
   document.addEventListener('click', event => {
     const button = event.target.closest?.('.macrogroup_lowrider-homing_panel button, button[data-lowrider-shake], button[data-lowrider-disable-steppers]');
     const shake = button?.dataset?.lowriderShake;
@@ -698,7 +718,7 @@
     const running=status?.print_stats?.state==='printing';
     const home=document.getElementById('lowrider-home-dialog');if(home){home.disabled=!ready||running||paused||homingPending||status?.idle_timeout?.state==='Printing';home.setAttribute('aria-disabled',String(home.disabled));home.toggleAttribute('data-lowrider-unavailable',home.disabled);home.title=home.disabled?'Homing is unavailable while busy or disconnected':'Open homing controls';}
     const pause=document.getElementById('lowrider-pause-resume');
-    if(pause){pause.disabled=!ready||(!paused&&!running)||(paused&&(!window.CncPreflight||!window.CncPreflight.canResume()));const text=paused?'Resume':'Pause';if(pause.textContent!==text)pause.textContent=text;pause.style.backgroundColor=paused?'#b26a00':'#1976d2';}
+    if(pause){pause.hidden=paused;pause.disabled=!ready||(!paused&&!running)||(paused&&(!window.CncPreflight||!window.CncPreflight.canResume()));const text=paused?'Resume':'Pause';if(pause.textContent!==text)pause.textContent=text;pause.style.backgroundColor=paused?'#b26a00':'#1976d2';}
     const label=document.getElementById('lowrider-job-state');if(label){const text=paused?'Paused':running?'Running':'Idle';if(label.textContent!==text)label.textContent=text;}
     const light=document.getElementById('lowrider-grid-light');
     if(light){light.disabled=!ready;const warning=!!status?.['gcode_macro _LED_IDLE_STATE']?.automatic;const on=(status?.['gcode_macro _LED_IDLE_STATE']?.steady??status?.['led work_lights']?.color_data?.[0]?.[3]??0)>0||!!status?.['gcode_macro LED_BREATHE']?.enabled;light.style.backgroundColor=warning?'#b26a00':on?'#202020':'#2e7d32';const breathing=!!status?.['gcode_macro LED_BREATHE']?.enabled;const brightness=Number(status?.['led work_lights']?.color_data?.[0]?.[3]??status?.['gcode_macro _LED_IDLE_STATE']?.steady??0);const percent=Math.round(Math.max(0,Math.min(1,brightness))*100);const text='Light: '+(!ready?'—':warning?'Idle warning':breathing?'Breathe':percent===0?'Off':percent===100?'Max':percent+'%');if(light.textContent!==text)light.textContent=text;light.setAttribute('aria-label',text);light.setAttribute('aria-pressed',String(on));light.title=warning?'Snooze idle warning for fifteen minutes':on?'Brightness, breathing, or turn off':'Turn work light on at 70%';}
@@ -917,9 +937,8 @@
     syncJogReference(status);
     const i='XYZ'.indexOf(axis),requested=target;if(machine)target=machineToWork(target,status.gcode_move,i);const move={target,distance:target-status.gcode_move.gcode_position[i]};
     const limit=travelLimitReason(axis,move,status);if(limit)throw Error(limit);
-    if(needsClearanceConfirm(axis,move,status)&&!confirmed){if(!await confirmClearance(axis,move,status))return;return sendDirectJog(axis,requested,true,machine);}
-    const speed=effectiveJogPercent(axis,target,status),feed=(axis==='Z'?1500:12000)*speed/100/Math.max(.01,status.gcode_move.speed_factor||1);
-    const sent=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:`_CLIENT_LINEAR_MOVE ${axis}=${Number(target.toFixed(6))} F=${Number(feed.toFixed(3))} ABSOLUTE=1`})});
+    if(needsClearanceConfirm(axis,move,status)&&!allowBelowZ5&&!confirmed){if(!await confirmClearance(axis,move,status))return;return sendDirectJog(axis,requested,true,machine);}
+    const sent=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:jogCommand(axis,target,status)})});
     const result=await sent.json();if(!sent.ok||result.error)throw Error(result.error?.message||'Move failed');
   }
   function mountDirectPositions(toolhead) {
@@ -1132,10 +1151,10 @@
         for(const [action,label] of [['minus','▼'],['plus','▲'],['min','Min'],['half','50%'],['max','Max']]){
           const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.lowriderRunAction=action;
           button.setAttribute('aria-label',`${action==='minus'?'Decrease':action==='plus'?'Increase':action==='min'?'Minimum':action==='half'?'50 percent':'Maximum'} run speed`);
-          button.title=action==='max'?'300% — confirmation required':action==='min'?'1%':action==='half'?'50%':`${action==='minus'?'Decrease':'Increase'} by 1 percentage point`;
+          button.title=action==='max'?'300% — confirmation required':action==='min'?'1%':action==='half'?'50%':`${action==='minus'?'Decrease':'Increase'} by 10 percentage points`;
           button.addEventListener('click',async()=>{
             button.disabled=true;
-            try{const response=await fetch('/printer/objects/query?gcode_move&webhooks',{cache:'no-store'});const state=(await response.json()).result?.status;if(!response.ok||state?.webhooks?.state!=='ready')throw Error('Klipper is not ready');const current=Math.round(state.gcode_move.speed_factor*100);requestRunSpeed(action==='min'?1:action==='half'?runSpeedPreset(current):action==='max'?300:Math.max(1,Math.min(300,current+(action==='minus'?-1:1))));}
+            try{const response=await fetch('/printer/objects/query?gcode_move&webhooks',{cache:'no-store'});const state=(await response.json()).result?.status;if(!response.ok||state?.webhooks?.state!=='ready')throw Error('Klipper is not ready');const current=Math.round(state.gcode_move.speed_factor*100);requestRunSpeed(action==='min'?1:action==='half'?runSpeedPreset(current):action==='max'?300:Math.max(1,Math.min(300,current+(action==='minus'?-10:10))));}
             catch(error){homingNotice(error.message);}finally{button.disabled=false;}
           });buttons[action]=button;
         }

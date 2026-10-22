@@ -1,23 +1,24 @@
 /* Shared staged-job UI; all Start/Resume authorization occurs on the Pi. */
 (() => {
  'use strict';
- const endpoint='/machine/cnc_preflight/';let state={state:'empty'},latest=null,busy=false,polling=false,dialogSequence=0;
+ const endpoint='/machine/cnc_preflight/';let state={state:'empty'},latest=null,busy=false,polling=false,dialogSequence=0,resumePending=false,resumeDialogOpen=false,failedOperation='';
  const $=s=>document.querySelector(s),ui=()=>window.PendantUI;
  const el=(tag,text,cls)=>ui().el(tag,text,cls);
  const text=(node,value)=>{if(node&&node.textContent!==value)node.textContent=value;};
  async function api(name,method='GET',body){return ui().api(endpoint+name,method,body);}
- function canResume(){return !busy&&!!latest?.pause_resume?.is_paused&&state.active_filename===state.filename&&state.state==='analyzed'&&!!state.verification?.approved;}
+ function isReturning(){return resumePending||state.operation?.state==='returning';}
+ function canResume(){return latest?.webhooks?.state==='ready'&&latest?.toolhead?.homed_axes==='xyz'&&!busy&&!isReturning()&&!resumeDialogOpen&&!!latest?.pause_resume?.is_paused&&state.active_filename===state.filename&&state.state==='analyzed'&&!!state.verification?.approved;}
  function render(){
   const card=$('#pendant-stage-card');if(!card)return;
   const paused=!!latest?.pause_resume?.is_paused,running=!paused&&latest?.print_stats?.state==='printing';
   card.hidden=running||(!state.filename&&!paused);card.dataset.result=state.state==='scanning'?'pending':state.verification?.approved?'pass':'blocked';
   text($('#pendant-stage-filename'),state.filename||'No file staged');
-  const message=state.state==='scanning'?`Scanning ${Math.round((state.progress||0)*100)}% · ${(state.lines||0).toLocaleString()} lines`:state.verification?.reason||state.message||'Stage and verify the paused file.';
+  const message=isReturning()?'Returning to saved position…':state.state==='scanning'?`Scanning ${Math.round((state.progress||0)*100)}% · ${(state.lines||0).toLocaleString()} lines`:state.verification?.reason||state.message||'Stage and verify the paused file.';
   text($('#pendant-stage-result'),message);
   const progress=$('#pendant-scan-progress');progress.hidden=state.state!=='scanning';progress.value=state.progress||0;
-  const start=$('#pendant-verified-start');start.hidden=paused;start.disabled=busy||state.state!=='analyzed'||!state.verification?.approved||running;
+  const start=$('#pendant-verified-start');start.hidden=paused;start.disabled=latest?.webhooks?.state!=='ready'||latest?.toolhead?.homed_axes!=='xyz'||busy||state.state!=='analyzed'||!state.verification?.approved||running;
   const resume=$('#pendant-quadrant-resume');resume.hidden=!paused;resume.disabled=!canResume();
-  text(resume,!busy&&state.state==='scanning'?'Verifying…':'Resume job…');
+  text(resume,isReturning()?'Returning…':!busy&&state.state==='scanning'?'Verifying…':'Resume job…');
   const old=$('#lowrider-pause-resume');if(paused&&old)old.disabled=!canResume();
   ui().queueFit();
  }
@@ -29,7 +30,7 @@
   const details=el('button','Verify / details');details.addEventListener('click',detailsDialog);controls.append(start,details);card.append(filename,result,progress,controls);zone.before(card);
   const resumeButton=el('button','Resume job…');resumeButton.id='pendant-quadrant-resume';resumeButton.addEventListener('click',resume);pad.append(resumeButton);render();
  }
- async function refresh(){if(polling)return state;polling=true;try{state=await api('status');}catch(error){state={...state,state:'unavailable',verification:{approved:false,reason:'Verification service unavailable: '+error.message}};}finally{polling=false;render();}return state;}
+ async function refresh(){if(polling)return state;polling=true;try{state=await api('status');if(state.operation?.state==='complete'||state.operation?.state==='failed')resumePending=false;if(state.operation?.state==='failed'&&state.operation.id!==failedOperation){failedOperation=state.operation.id;const m=ui().modal('Resume stopped — check controller');m.insert(el('p',state.operation.message));}}catch(error){state={...state,state:'unavailable',verification:{approved:false,reason:'Verification service unavailable: '+error.message}};}finally{polling=false;render();}return state;}
  async function stage(filename){busy=true;render();try{state=await api('stage','POST',{filename});}finally{busy=false;render();}await refresh();}
  function verificationText(value){
   if(!value)return 'Verification has not completed.';
@@ -54,9 +55,20 @@
   busy=true;render();try{await ensurePausedFile();const result=await api('verify','POST',{});state.verification=result;const m=ui().modal(result.approved?'Tool Z verified':'Resume blocked — check tool Z');m.insert(el('pre',verificationText(result),'preflight-details'));if(state.state==='scanning')m.insert(el('p','A background scan is running. Close this dialog and wait for the main verification panel.'));m.add('Verify again',async()=>{m.dialog.close();await afterZero();});}catch(error){const m=ui().modal('Tool Z verification');m.insert(el('p',error.message));}finally{busy=false;await refresh();}
  }
  async function resume(){
-  if(busy)return;busy=true;render();try{await ensurePausedFile();const result=await api('verify','POST',{});state.verification=result;if(!result.approved){await detailsDialog();return;}
-   const captured=state.id,m=ui().modal('Resume CNC job?');m.insert(el('p','Check tool clearance, the workpiece, clamps, and router power. Resume lifts Z, returns to the captured XY, then lowers to the saved cutting Z.'));m.insert(el('pre',verificationText(result),'preflight-details'));
-   m.add('Resume job',async()=>{m.dialog.close();busy=true;render();try{await api('resume','POST',{stage_id:captured});}catch(error){const failure=ui().modal('Resume blocked');failure.insert(el('p',error.message));}finally{busy=false;await refresh();}});
+  if(busy||isReturning()||resumeDialogOpen)return;busy=true;render();try{await ensurePausedFile();const result=await api('verify','POST',{});state.verification=result;if(!result.approved){await detailsDialog();return;}
+   const captured=state.id,m=ui().modal('Resume job?');resumeDialogOpen=true;m.dialog.addEventListener('close',()=>{resumeDialogOpen=false;render();});m.dialog.querySelector('.dialog-actions button').textContent='Cancel';m.insert(el('p','Travel verified — ready to resume. Check the tool, clamps and router power.'));
+   const details=el('pre',verificationText(result),'preflight-details');details.hidden=true;m.insert(details);m.add('Details',()=>{details.hidden=!details.hidden;});
+   m.add('Resume',async()=>{m.dialog.close();busy=true;resumePending=true;render();try{const accepted=await api('resume','POST',{stage_id:captured});if(accepted.operation)state.operation=accepted.operation;}catch(error){
+     await refresh();let actual;try{actual=(await ui().api('/printer/objects/query?pause_resume&print_stats&virtual_sdcard')).status;}catch(_){}
+     if(actual?.print_stats?.state==='printing'&&!actual?.pause_resume?.is_paused){resumePending=false;}
+     else if(state.operation?.state!=='returning'){
+       // A lost response does not cancel the Pi's accepted command. Keep the
+       // action locked until the controller state is known; never retry it.
+       const timeout=error.name==='TimeoutError'||error.name==='AbortError'||/timed? out|timeout|fetch|network/i.test(error.message);
+       if(!timeout)resumePending=false;
+       const failure=ui().modal(timeout?'Resume status uncertain':'Resume blocked');failure.insert(el('p',timeout?'The connection response was lost. The machine may still be returning. Watch the machine; do not send another Resume. The pendant will check its state.':error.message));
+     }
+    }finally{busy=false;await refresh();}});
   }catch(error){const m=ui().modal('Resume blocked');m.insert(el('p',error.message));}finally{busy=false;render();}
  }
  async function startJob(){
@@ -82,5 +94,5 @@
  }
  document.addEventListener('cnc-pendant-status',event=>{latest=event.detail;render();});new MutationObserver(mount).observe(document.documentElement,{childList:true,subtree:true});mount();
  async function poll(){await refresh();setTimeout(poll,1500);}poll();
- window.CncPreflight={files,resume,afterZero,canResume,refresh};
+ window.CncPreflight={files,resume,afterZero,canResume,isReturning,refresh};
 })();

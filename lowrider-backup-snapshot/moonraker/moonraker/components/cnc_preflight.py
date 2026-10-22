@@ -1,6 +1,6 @@
 """Moonraker-owned CNC staging and preflight gate. GPL-3.0-or-later."""
 from __future__ import annotations
-import asyncio, datetime, hashlib, json, math, pathlib, uuid
+import asyncio, datetime, hashlib, json, math, pathlib, uuid, logging
 from ..common import RequestType
 from .cnc_gcode_scan import scan_file, metadata_from_header, fingerprints, evaluate_bounds
 
@@ -10,7 +10,7 @@ class CNCPreflight:
         self.root=pathlib.Path(self.files.get_directory('gcodes')).resolve()
         self.directory=pathlib.Path(config.get('cache_path','~/printer_data/cnc_preflight')).expanduser();self.directory.mkdir(parents=True,exist_ok=True)
         self.profile_path=pathlib.Path(config.get('profile_path','~/printer_data/config/cnc_preflight_profile.json')).expanduser()
-        self.job={'state':'empty','message':'Select and stage a file.'};self.model=None;self.generation=0;self.scan_lock=asyncio.Lock();self.action_lock=asyncio.Lock();self.bounds_cache={};self.initial_machine=None
+        self.job={'state':'empty','message':'Select and stage a file.'};self.model=None;self.generation=0;self.scan_lock=asyncio.Lock();self.action_lock=asyncio.Lock();self.bounds_cache={};self.initial_machine=None;self.operation={'state':'idle'};self.operation_task=None
         for name,method in [('inspect',RequestType.GET),('stage',RequestType.POST),('status',RequestType.GET),('verify',RequestType.POST),('start',RequestType.POST),('resume',RequestType.POST),('clear',RequestType.POST)]:
             self.server.register_endpoint('/machine/cnc_preflight/'+name,method,getattr(self,'_'+name))
     def _path(self,filename):
@@ -58,9 +58,11 @@ class CNCPreflight:
         return {'filename':filename,'size':stat.st_size,'modified':datetime.datetime.fromtimestamp(stat.st_mtime,datetime.timezone.utc).isoformat(),'metadata':box,'preliminary':self._preliminary(s,box),'header_comments':comments}
     async def _stage(self,request):
         async with self.action_lock:
+            if getattr(self,'operation',{}).get('state')=='returning':raise self.server.error('Resume return is already in progress',409)
             filename=request.get_str('filename');path=self._path(filename);s=await self._snapshot()
             if s.get('virtual_sdcard',{}).get('is_active'):raise self.server.error('Pause or stop the running file before staging',409)
             if s.get('pause_resume',{}).get('is_paused') and s.get('print_stats',{}).get('filename')!=filename:raise self.server.error('While paused, stage only the active file',409)
+            self.operation={'state':'idle'}
             self.generation+=1;generation=self.generation;self.model=None;self.bounds_cache={};self.initial_machine=s.get('gcode_move',{}).get('position',[0,0,0])[:3]
             self.job={'id':uuid.uuid4().hex,'filename':filename,'state':'scanning','progress':0,'lines':0,'message':'Scanning G-code in the background…','metadata':metadata_from_header(path)}
             asyncio.create_task(self._scan(path,generation));return dict(self.job)
@@ -79,6 +81,7 @@ class CNCPreflight:
                 if generation==self.generation:self.job.update(state='error',message=str(error))
     async def _status(self,request):
         result=dict(self.job)
+        result['operation']=dict(getattr(self,'operation',{'state':'idle'}))
         try:
             s=await self._snapshot(config=self.model is not None);paused=s.get('pause_resume',{}).get('is_paused',False)
             result['paused']=paused;result['active_filename']=s.get('print_stats',{}).get('filename','');result['preliminary']=self._preliminary(s)
@@ -137,6 +140,7 @@ class CNCPreflight:
         s=await self._snapshot(True);return await self._check(s,s.get('pause_resume',{}).get('is_paused',False),True)
     async def _approve_and_run(self,request,resume):
         async with self.action_lock:
+            if getattr(self,'operation',{}).get('state')=='returning':raise self.server.error('Resume return is already in progress. Do not send another Resume.',409)
             if request.get_str('stage_id')!=self.job.get('id'):raise self.server.error('The staged file changed. Review the new selection.',409)
             generation=self.generation;s=await self._snapshot(True);result=await self._check(s,resume,True)
             if not result.get('approved'):raise self.server.error(result.get('reason','Verification failed')+' '+ '; '.join(v['message'] for v in result.get('violations',[])+result.get('return_violations',[])),409)
@@ -155,14 +159,34 @@ class CNCPreflight:
                 commands.extend(['SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=resume_approved VALUE=1','RESUME'])
             else:
                 name=self.job['filename'];commands.extend([f'SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=filename VALUE=\'"{name}"\'','SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=start_approved VALUE=1',f'SDCARD_PRINT_FILE FILENAME="{name}"']);self.initial_machine=gm['position'][:3]
-            try:await self.api.run_gcode('\n'.join(commands))
-            finally:
-                # Clear approval even if a command or downstream resume fails.
-                await self.api.run_gcode('SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=start_approved VALUE=0\nSET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=resume_approved VALUE=0')
+            if resume:
+                # The return can take minutes. Acknowledge promptly and let the
+                # shared status endpoint report its actual completion.
+                self.operation={'state':'returning','action':'resume','id':uuid.uuid4().hex,'filename':self.job['filename'],'message':'Returning to saved position…'}
+                self.operation_task=asyncio.create_task(self._execute_resume('\n'.join(commands)))
+                return {'ok':True,'accepted':True,'operation':dict(self.operation)}
+            await self._execute_commands('\n'.join(commands))
             return {'ok':True,'action':'resume' if resume else 'start','verification':result}
+    async def _execute_commands(self,script):
+        try:await self.api.run_gcode(script)
+        finally:
+            try:await self.api.run_gcode('SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=start_approved VALUE=0\nSET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=resume_approved VALUE=0')
+            except Exception:logging.exception('CNC preflight approval cleanup unavailable; guards remain single-use and expire')
+    async def _execute_resume(self,script):
+        try:
+            await self._execute_commands(script)
+            self.operation.update(state='complete',message='Resume return complete.')
+        except Exception as error:
+            try:
+                actual=await self._snapshot()
+                if not actual.get('pause_resume',{}).get('is_paused') and actual.get('print_stats',{}).get('state')=='printing':
+                    self.operation.update(state='complete',message='Controller confirms the job is running.');return
+            except Exception:pass
+            self.operation.update(state='failed',message=str(error))
     async def _start(self,request):return await self._approve_and_run(request,False)
     async def _resume(self,request):return await self._approve_and_run(request,True)
     async def _clear(self,request):
+        if getattr(self,'operation',{}).get('state')=='returning':raise self.server.error('Resume return is in progress',409)
         s=await self._snapshot()
         if s.get('print_stats',{}).get('state') in ['printing','paused'] or s.get('pause_resume',{}).get('is_paused'):raise self.server.error('Cannot clear an active or paused job',409)
         self.generation+=1;self.model=None;self.bounds_cache={};self.job={'state':'empty','message':'Select and stage a file.'};return self.job
