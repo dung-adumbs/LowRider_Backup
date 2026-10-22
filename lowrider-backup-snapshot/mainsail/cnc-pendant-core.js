@@ -531,7 +531,7 @@
   document.addEventListener('cnc-command-start',()=>document.querySelectorAll('.lowrider-command-status').forEach(archiveCommandMessage));
   function homeButtonColor(status,forced){return forced?'#b71c1c':status?.toolhead?.homed_axes==='xyz'?'#2e7d32':'#1976d2';}
   async function freshHomeStatus(){
-    const response=await fetch('/printer/objects/query?print_stats&pause_resume&idle_timeout&webhooks&toolhead&gcode_move',{cache:'no-store',signal:AbortSignal.timeout(5000)});
+    const response=await fetch('/printer/objects/query?print_stats&pause_resume&idle_timeout&webhooks&toolhead&gcode_move&virtual_sdcard',{cache:'no-store',signal:AbortSignal.timeout(5000)});
     const status=(await response.json()).result?.status;
     if(!response.ok||status?.webhooks?.state!=='ready')throw Error('Klipper is not ready.');
     controlStatus={...controlStatus,...status};updateAvailability();return status;
@@ -539,13 +539,14 @@
   async function runHomeCommand(command,shake=false){
     const notify=message=>homingNotice(message,!!shake),action=command.replace(/_/g,' ');
     if(homingPending){notify('A homing or shake test is already in progress.');return;}
-    homingPending=true;updateAvailability();notify('Checking machine�');
+    homingPending=true;updateAvailability();notify('Checking machine...');
     try{
       const state=await freshHomeStatus();
       if(['printing','paused'].includes(state.print_stats.state)||state.pause_resume?.is_paused||state.virtual_sdcard?.is_active||motionStillQueued(state))throw Error('Homing and shake tests are blocked while moving, running, or paused.');
       if(!shake){const axes=command==='HOME_ALL'?'xyz':command.slice(5).toLowerCase();if([...axes].every(axis=>state.toolhead.homed_axes.includes(axis)))throw Error('Already homed. Disable steppers first if you intend to re-home.');}
-      notify(`${action} in progress�`);
-      const response=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:command})});
+      const pending=fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script:command})});
+      notify(`${action} in progress...`);
+      const response=await pending;
       const result=await response.json();if(!response.ok||result.error)throw Error(result.error?.message||'Homing command failed.');
       notify(`${action} complete.`);
     }catch(error){notify(`Command not completed: ${error.message}`);}
