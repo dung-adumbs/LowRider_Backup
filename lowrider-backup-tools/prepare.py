@@ -59,7 +59,7 @@ def main():
         checked_copy(HOME / 'mainsail' / name, pathlib.Path('mainsail') / name)
     checked_copy(HOME / 'klipper/klippy/extras/cnc_force_jog.py', pathlib.Path('klipper/klippy/extras/cnc_force_jog.py'))
     checked_copy(HOME / 'printer_data/config/cnc_preflight_profile.json', pathlib.Path('printer_data/config/cnc_preflight_profile.json'))
-    for name in ('cnc_preflight.py', 'cnc_gcode_scan.py'):
+    for name in ('cnc_preflight.py', 'cnc_gcode_scan.py', 'cnc_travel_optimize.py'):
         checked_copy(HOME / 'moonraker/moonraker/components' / name, pathlib.Path('moonraker/moonraker/components') / name)
     for src in sorted((HOME / 'printer_data/cnc_preflight').glob('*.json')):
         checked_copy(src, pathlib.Path('printer_data/cnc_preflight') / src.name)
