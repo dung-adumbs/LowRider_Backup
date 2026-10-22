@@ -1,5 +1,5 @@
 {
-  "belowZ5Cap": 30,
+  "belowZ5Cap": 10,
   "jogScale": "coarse",
   "jogSpeed": 100,
   "safeJogZ": 25,
