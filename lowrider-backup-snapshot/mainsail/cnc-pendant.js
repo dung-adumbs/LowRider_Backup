@@ -20,7 +20,7 @@
     const add=(label,handler)=>{const b=el('button',label);b.type='button';b.addEventListener('click',async()=>{b.disabled=true;try{await handler();}catch(error){feedback.textContent=error.message;}finally{b.disabled=false;}});actions.append(b);return b;};
     add('Close',()=>dialog.close());dialog.addEventListener('close',()=>dialog.remove());document.body.append(dialog);dialog.showModal();return{dialog,feedback,add,insert(e){dialog.insertBefore(e,feedback);}};
   }
-  function fit(){const frame=$('#pendant-viewport'),content=$('#pendant-scale'),panel=$('.toolhead-control-panel');if(!frame||!panel)return;const scale=Math.min(1,frame.clientHeight/Math.max(1,panel.offsetHeight+8));const transform=scale<.999?`scale(${scale})`:'';if(content.style.transform!==transform)content.style.transform=transform;content.dataset.scale=scale.toFixed(3);}
+  function fit(){const frame=$('#pendant-viewport'),content=$('#pendant-scale'),panel=$('.toolhead-control-panel');if(!frame||!panel)return;const mobile=matchMedia('(max-width:799px), (pointer:coarse)').matches;const scale=mobile?1:Math.min(1,frame.clientHeight/Math.max(1,panel.offsetHeight+8));const transform=scale<.999?`scale(${scale})`:'';if(content.style.transform!==transform)content.style.transform=transform;content.dataset.scale=scale.toFixed(3);}
   function queueFit(){if(fitQueued)return;fitQueued=true;requestAnimationFrame(()=>{fitQueued=false;fit();});}
   window.PendantUI={modal,el,api,queueFit};
   window.addEventListener('resize',queueFit);window.visualViewport?.addEventListener('resize',queueFit);
@@ -110,6 +110,28 @@
     z.dataset.pendantQuadrant='true';pad.append(z);const motion=el('div');motion.id='pendant-motion-notice';motion.hidden=true;motion.setAttribute('role','status');motion.append(el('strong','IN MOTION'),el('span','Additional moves will be queued.'),el('span','Proceed with caution.'));pad.append(motion);
     const safety=el('div');safety.id='pendant-safety-strip';zone.after(safety);safety.append(safe);oldScale.hidden=true;
     const cap=safe.lastElementChild;cap.prepend(el('span','Jog cap','pendant-cap-caption'));
+    const safetySettings=el('button');safetySettings.id='pendant-z-safety-settings';safetySettings.type='button';
+    const safeInput=$('#lowrider-safe-jog-z'),capInput=$('#lowrider-z5-cap');
+    const updateSafety=()=>{safetySettings.textContent=`Z Safety: ${safeInput.value} mm · Cap ${capInput.value}%`;};
+    for(const input of [safeInput,capInput])input.parentElement.closest('label').hidden=true;
+    safe.append(safetySettings);updateSafety();
+    document.addEventListener('cnc-shared-setting',()=>setTimeout(updateSafety,0));
+    safetySettings.addEventListener('click',()=>{
+      const m=modal('Z Safety');m.dialog.classList.add('pendant-safety-dialog');
+      m.dialog.querySelector('.dialog-actions button').textContent='Cancel';
+      m.insert(el('p',`Current: Safe Z ${safeInput.value} mm; below-safe-Z jog cap ${capInput.value}%.`));
+      const fields=[];
+      for(const [original,label,max] of [[safeInput,'Safe work Z height (mm)',109],[capInput,'Below-safe-Z jog cap (%)',100]]){
+        const row=el('label',label,'dialog-field'),input=el('input');input.type='number';input.inputMode='decimal';input.step='any';input.min=original===capInput?'1':'0';input.max=String(max);input.value=original.value;input.setAttribute('aria-label',label);row.append(input);m.insert(row);fields.push({original,input,max});
+        input.addEventListener('focus',()=>setTimeout(()=>input.scrollIntoView({block:'nearest'}),150));
+        input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();input.blur();}});
+      }
+      m.add('Save',()=>{
+        for(const {input,max} of fields){const n=Number(input.value);if(!input.value.trim()||!Number.isFinite(n)||n<Number(input.min)||n>max)throw Error(`Enter a value from ${input.min} to ${max}.`);}
+        for(const {original,input} of fields){original.value=input.value;original.dispatchEvent(new Event('blur'));}
+        updateSafety();m.dialog.close();
+      });
+    });
     const actions=el('div');actions.id='pendant-actions';safety.after(actions);actions.append(home,$('#lowrider-grid-zero'),$('#lowrider-pause-resume'),$('#lowrider-grid-light').parentElement);active.hidden=true;
     const auxiliary=$('#pendant-auxiliary');auxiliary.append($('.macrogroup_lowrider-homing_panel'),timeout);
     const disable=$('[data-lowrider-disable-steppers]');disable.textContent='Disable Steppers';disable.setAttribute('aria-label','Disable Steppers');auxiliary.append(disable);
