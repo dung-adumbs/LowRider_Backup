@@ -42,6 +42,10 @@ class CNCPreflight:
             body=config.get(name.lower(),{}).get('gcode','');actual=hashlib.sha256(body.encode()).hexdigest()
             if actual!=expected:return 'Controller macro changed: '+name+'. Review and update the verification profile.'
         if not profile.get('macro_sha256'):return 'Empty controller macro profile.'
+        covered={name.lower() for name in profile['macro_sha256']}
+        if self.model:
+            for name in self.model.runtime_macros:
+                if 'gcode_macro '+name.lower() not in covered:return 'Reviewed runtime macro is missing from the controller profile: '+name
         client=s.get('gcode_macro _CLIENT_VARIABLE',{})
         if client.get('user_resume_macro')!='CNC_RESUME_ORDERED':return 'Ordered resume hook is not configured.'
         if self.model and self.model.uses_arcs and 'gcode_arcs' not in config:return 'This file uses arcs, but Klipper gcode_arcs is not configured.'

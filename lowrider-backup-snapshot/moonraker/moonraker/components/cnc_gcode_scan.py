@@ -27,6 +27,7 @@ class Model:
     metadata: dict=field(default_factory=dict)
     uses_arcs: bool=False
     loops: list=field(default_factory=list)
+    runtime_macros: list=field(default_factory=list)
     offsets: array=field(default_factory=lambda:array('Q'))
     coords: array=field(default_factory=lambda:array('d'))
     masks: array=field(default_factory=lambda:array('B'))
@@ -55,7 +56,7 @@ class Model:
             count+=1
         return {'min':lo,'max':hi,'section':section,'label':self.sections[section]['label'],'points':count}
     def report(self):
-        return {'schema':VERSION,'filename':self.filename,'sha256':self.sha256,'program_body_sha256':self.body_sha256,'size':self.size,'modified_ns':self.modified_ns,'scan_seconds':round(self.seconds,3),'lines':self.lines,'moves':self.moves,'sections':self.sections,'issues':self.issues,'warnings':self.warnings,'metadata':self.metadata,'loops':self.loops}
+        return {'schema':VERSION,'filename':self.filename,'sha256':self.sha256,'program_body_sha256':self.body_sha256,'size':self.size,'modified_ns':self.modified_ns,'scan_seconds':round(self.seconds,3),'lines':self.lines,'moves':self.moves,'sections':self.sections,'issues':self.issues,'warnings':self.warnings,'metadata':self.metadata,'loops':self.loops,'runtime_macros':self.runtime_macros}
 
 def metadata_from_header(path):
     with Path(path).open('rb') as source:text=source.read(262144).decode('utf-8',errors='replace')
@@ -107,6 +108,11 @@ def scan_file(path,progress=None):
             if not line:continue
             line=re.sub(r'^N\d+\s*','',line,flags=re.I)
             first=line.split(None,1)[0].upper()
+            if first in ['START_JOB','END_JOB','LED_ON','LED_OFF','CNC_TEST_PREFLIGHT']:
+                valid=(line.upper()==first) if first!='CNC_TEST_PREFLIGHT' else bool(re.fullmatch(r'CNC_TEST_PREFLIGHT\s+KIND=(?:CIRCLE|SQUARE)',line,re.I))
+                if not valid:model.issue(model.lines,'Unsupported parameters on reviewed macro '+first)
+                if first not in model.runtime_macros:model.runtime_macros.append(first)
+                continue
             if first in ['RESPOND','M117']:
                 tool=re.search(r'Tool:\s*(.*?)(?:Check work zero|Router|[\"]|$)',line,re.I)
                 if tool:label=tool[1].strip(' .')[:180] or label
