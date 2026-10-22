@@ -25,6 +25,13 @@
   window.PendantUI={modal,el,api,queueFit};
   window.addEventListener('resize',queueFit);window.visualViewport?.addEventListener('resize',queueFit);
   document.addEventListener('cnc-pendant-status',event=>{
+    const s=event.detail,bar=$('#pendant-job-motion-summary');if(!bar)return;
+    let readout=$('#pendant-motion-speed');if(!readout){readout=el('div',undefined);readout.id='pendant-motion-speed';readout.style.cssText='text-align:center;font-size:12px;color:#ccc;margin:3px 0 6px';readout.title='Live: Klipper planned tool speed, not encoder-measured. Requested: last parsed feed including Run speed override; buffered commands may be ahead of current motion.';bar.append(readout);}
+    const ready=s?.webhooks?.state==='ready',live=s?.motion_report?.live_velocity,feed=s?.gcode_move?.speed,factor=s?.gcode_move?.speed_factor;
+    const target=Number.isFinite(feed)&&Number.isFinite(factor)?feed*factor/60:null;
+    const text='Motion · Live '+(ready&&Number.isFinite(live)?live.toFixed(1):'—')+' mm/s · Requested '+(ready&&target!==null?target.toFixed(1):'—')+' mm/s';if(readout.textContent!==text)readout.textContent=text;
+  });
+  document.addEventListener('cnc-pendant-status',event=>{
     const s=event.detail;latest=s;const ready=s?.webhooks?.state==='ready',active=!!s?.pause_resume?.is_paused||['paused','printing'].includes(s?.print_stats?.state);$('#pendant-live-state').textContent=!ready?'Disconnected / controller not ready':(s.pause_resume?.is_paused||s.print_stats?.state==='paused'?'Paused':s.print_stats?.state==='printing'?'Running':'Ready')+(active&&s.print_stats?.filename?' · '+s.print_stats.filename:'');
     if(ready&&stoppedWasNotReady){stoppedShown=false;stoppedWasNotReady=false;document.querySelector('dialog[aria-label="Controller stopped"]')?.close();}else if(s?.webhooks?.state==='shutdown'){stoppedWasNotReady=true;stoppedDialog(s.webhooks.state_message);}
     const stopped=!ready&&stoppedWasNotReady,banner=$('#pendant-live-state');banner.setAttribute('role',stopped?'button':'status');banner.tabIndex=stopped?0:-1;if(stopped)banner.textContent='Controller stopped — tap for restart';
@@ -142,7 +149,7 @@
     const job=el('section');job.id='pendant-running-job';job.setAttribute('aria-label','Current CNC job');
     job.append(el('h2','JOB RUNNING'));job.firstChild.id='pendant-job-title';
     const filename=el('div');filename.id='pendant-job-file';job.append(filename);
-    const percent=el('strong','0%');percent.id='pendant-job-percent';job.append(percent);
+    const percent=el('strong','0%');percent.id='pendant-job-percent';const summary=el('div');summary.id='pendant-job-motion-summary';summary.style.cssText='display:flex;justify-content:center;align-items:center;gap:20px;flex-wrap:wrap';summary.append(percent);job.append(summary);
     const progress=el('progress');progress.id='pendant-job-progress';progress.max=1;progress.value=0;progress.setAttribute('aria-label','Job progress');job.append(progress);
     for(const id of ['elapsed','remaining']){const line=el('div');line.id='pendant-job-'+id;job.append(line);}
     const pause=el('button','Pause job');pause.id='pendant-running-pause';pause.addEventListener('click',()=>$('#lowrider-pause-resume').click());job.append(pause);
