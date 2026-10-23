@@ -36,7 +36,7 @@
  async function stage(filename){busy=true;render();try{state=await api('stage','POST',{filename});}finally{busy=false;render();}await refresh();}
  function verificationText(value){
   if(!value)return 'Verification has not completed.';
-  const lines=[value.reason||'',...(value.violations||[]).map(v=>v.message),...(value.return_violations||[]).map(v=>v.message)];
+  const lines=[value.reason||'',...(value.violations||[]).map(v=>v.message),...(value.return_violations||[]).map(v=>v.message),...(value.keepout_violations||[]).map(v=>v.message)];
   if(value.work_min)for(let i=0;i<3;i++)lines.push(`${'XYZ'[i]} work ${value.work_min[i].toFixed(3)} to ${value.work_max[i].toFixed(3)} mm · machine ${value.machine_min[i].toFixed(3)} to ${value.machine_max[i].toFixed(3)} mm`);
   if(value.label)lines.push('Tool section: '+value.label);if(value.scope)lines.push(value.scope);
   if(value.issues)for(const issue of value.issues.slice(0,8))lines.push(`Line ${issue.line}: ${issue.message}`);

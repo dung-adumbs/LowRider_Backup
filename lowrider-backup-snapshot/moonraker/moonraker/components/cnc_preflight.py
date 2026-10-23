@@ -2,7 +2,7 @@
 from __future__ import annotations
 import asyncio, datetime, hashlib, json, math, pathlib, uuid, logging
 from ..common import RequestType
-from .cnc_gcode_scan import scan_file, metadata_from_header, fingerprints, evaluate_bounds, thumbnail_data_url
+from .cnc_gcode_scan import scan_file, metadata_from_header, fingerprints, evaluate_bounds, thumbnail_data_url, keepout_interferences
 from .cnc_travel_optimize import inspect_header, optimize_bytes, MAX_BYTES
 
 class CNCPreflight:
@@ -216,9 +216,14 @@ class CNCPreflight:
             for i,axis in enumerate('XYZ'):
                 short=max(tool['axis_minimum'][i]-point[i],point[i]-tool['axis_maximum'][i],0.)
                 if short>1e-5:return_violations.append({'axis':axis,'overflow_mm':short,'message':f'Resume return path exceeds {axis} travel by {short:.3f} mm'})
-        approved=fit['fits'] and not return_violations
+        try:
+            blocks=await self.server.lookup_component('database').get_item('lowrider','keepout',[])
+            keepout_violations=keepout_interferences(bounds,offset,blocks,return_points)
+        except Exception as error:
+            return {'approved':False,'reason':'Cannot verify keep-out settings: '+str(error)}
+        approved=fit['fits'] and not return_violations and not keepout_violations
         if generation!=self.generation or model is not self.model:return {'approved':False,'reason':'The staged file changed during verification. Try again.'}
-        return {**fit,'approved':approved,'reason':'Within machine travel limits for this tool section and return path.' if approved else 'Out of bounds — adjust the setup/tool zero and verify again.','return_violations':return_violations,'sha256':model.sha256,'file_position':position,'scope':'Next tool section; later sections require their actual tool zeros. This is a travel check, not fixture/cutter collision certification.'}
+        return {**fit,'approved':approved,'reason':'Within machine travel limits for this tool section and return path.' if approved else 'Out of bounds — adjust the setup/tool zero and verify again.','return_violations':return_violations,'keepout_violations':keepout_violations,'keepout_sha256':hashlib.sha256(json.dumps(blocks,sort_keys=True).encode()).hexdigest(),'sha256':model.sha256,'file_position':position,'scope':'Next tool section; later sections require their actual tool zeros. This is a travel check, not fixture/cutter collision certification.'}
     async def _verify(self,request):
         if not self.model:return {'approved':False,'reason':'Stage the file and wait for analysis.'}
         s=await self._snapshot(True);return await self._check(s,s.get('pause_resume',{}).get('is_paused',False),True)
@@ -233,6 +238,8 @@ class CNCPreflight:
             if generation!=self.generation or fresh['gcode_move']['position'][:3]!=s['gcode_move']['position'][:3] or fresh['gcode_move']['gcode_position'][:3]!=s['gcode_move']['gcode_position'][:3]:raise self.server.error('Position or zero changed during verification. Try again.',409)
             reason=self._idle_reason(fresh,resume)
             if reason:raise self.server.error(reason,409)
+            blocks=await self.server.lookup_component('database').get_item('lowrider','keepout',[])
+            if hashlib.sha256(json.dumps(blocks,sort_keys=True).encode()).hexdigest()!=result.get('keepout_sha256'):raise self.server.error('Keep-out settings changed during verification. Verify again.',409)
             gm=fresh['gcode_move'];offset=[a-b for a,b in zip(gm['position'][:3],gm['gcode_position'][:3])]
             commands=[]
             for i,axis in enumerate('xyz'):
