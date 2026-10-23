@@ -133,3 +133,15 @@ html[data-native-app=android] .pendant-viewer-dialog h3{padding-right:220px}
 .pendant-header>a{text-align:center;font-size:11px;line-height:13px;padding:4px 9px;min-width:80px}.pendant-header #pendant-live-state{display:block;max-width:45px}html[data-native-app=android] .pendant-header{padding-top:3px;height:44px}html[data-native-app=android] #pendant-viewport{top:44px}
 
 .pendant-header>a{grid-column:1 / -1;grid-row:1}
+
+/* Center navigation on the viewport, independently of the Android gear reserve. */
+.pendant-header>a{position:fixed;grid-column:auto;grid-row:auto;left:50vw;top:calc(22px + env(safe-area-inset-top));transform:translate(-50%,-50%);z-index:2}
+.pendant-header #pendant-live-state{position:absolute;grid-column:auto;grid-row:auto;left:calc(50% + 48px);right:90px;top:50%;transform:translateY(-50%);max-width:none;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pendant-header #pendant-fullscreen{position:absolute;right:8px;top:50%;transform:translateY(-50%)}
+html[data-native-app=android] .pendant-header #pendant-live-state{right:60px}
+html[data-native-app=android] .pendant-header>a{top:22px}
+@media(min-width:800px) and (pointer:fine){.pendant-header>a{top:34px}}
+
+/* Balance status between centered navigation and right-side settings. */
+.pendant-header #pendant-live-state{text-align:center}
+
