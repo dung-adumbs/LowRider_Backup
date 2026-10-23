@@ -184,7 +184,7 @@
     if(response.status===404){keepoutBlocks=[];return;}
     const data=await response.json();
     if(!response.ok||data.error||!Array.isArray(data.result?.value))throw Error('Cannot verify keep-out settings; jog cancelled');
-    keepoutBlocks=data.result.value;
+    keepoutBlocks=data.result.value;document.dispatchEvent(new CustomEvent('cnc-keepouts',{detail:{count:keepoutBlocks.filter(b=>b.enabled).length}}));
     if(keepoutBlocks.some(b=>b.enabled&&!validKeepout(b)))throw Error('Invalid enabled keep-out block; jog cancelled');
   }
   function validKeepout(b){return ['xmin','xmax','ymin','ymax','safeZ','margin'].every(k=>Number.isFinite(b[k]))&&b.xmin<b.xmax&&b.ymin<b.ymax&&b.margin>=0;}
@@ -212,7 +212,7 @@
   }
   async function saveKeepouts(blocks){
     const response=await fetch('/server/database/item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({namespace:'lowrider',key:'keepout',value:blocks})});
-    const data=await response.json();if(!response.ok||data.error)throw Error(data.error?.message||'Cannot save keep-out settings');keepoutBlocks=blocks;updateAvailability();
+    const data=await response.json();if(!response.ok||data.error)throw Error(data.error?.message||'Cannot save keep-out settings');keepoutBlocks=blocks;document.dispatchEvent(new CustomEvent('cnc-keepouts',{detail:{count:blocks.filter(b=>b.enabled).length}}));updateAvailability();
   }
   function mountKeepoutPanel(toolhead){
     if(!toolhead||document.getElementById('lowrider-keepout-panel'))return;
@@ -386,7 +386,8 @@
     const caption = document.createElement('div');caption.id='lowrider-jog-caption'; caption.textContent = 'Jog speed %';
     caption.style.cssText = 'grid-column:1/-1;text-align:center;font-size:11px;opacity:.8';
     const value = document.createElement('input'); value.id='lowrider-jog-rate';value.type='text';value.inputMode='decimal';value.setAttribute('aria-label','Jog speed percent: active, selected in parentheses');value.addEventListener('focus',()=>{value.value=String(jogSpeed);value.select();});
-    value.title='Jog percentage, 10 to 100';value.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();value.blur();}});value.addEventListener('blur',()=>{const rate=Number(value.value.replace(/%/g,'').trim());if(Number.isFinite(rate)&&rate>=10&&rate<=100){jogSpeed=rate;saveShared('jogSpeed',rate);}else homingNotice('Enter a jog percentage from 10 to 100.');refreshJogChoices();});
+    value.title='Jog percentage, 10 to 100';value.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();value.blur();}});value.addEventListener('blur',()=>{if(value.readOnly)return;const rate=Number(value.value.replace(/%/g,'').trim());if(Number.isFinite(rate)&&rate>=10&&rate<=100){jogSpeed=rate;saveShared('jogSpeed',rate);}else homingNotice('Enter a jog percentage from 10 to 100.');refreshJogChoices();});
+    value.readOnly=true;value.title='Open Jog speed editor';value.addEventListener('click',()=>{const modal=cncDialog('Jog speed'),row=document.createElement('label'),edit=document.createElement('input');row.textContent='Jog speed (%) ';edit.type='number';edit.inputMode='decimal';edit.min='10';edit.max='100';edit.value=String(jogSpeed);edit.setAttribute('aria-label','Selected jog speed percent');row.append(edit);modal.dialog.append(row);modal.add('Apply',()=>{const n=Number(edit.value);if(!edit.value.trim()||!Number.isFinite(n)||n<10||n>100){edit.setCustomValidity('Enter 10 to 100 percent');edit.reportValidity();return;}jogSpeed=n;saveShared('jogSpeed',n);refreshJogChoices();modal.dialog.close();});modal.add('Cancel',()=>modal.dialog.close());modal.open();});
     value.style.cssText = 'grid-column:2/span 2;grid-row:2;width:100%;min-width:0;text-align:center;font-size:12px;font-weight:bold;background:#202020;color:inherit;border:1px solid #777;border-radius:3px';
     const rates = document.createElement('div'); rates.id = 'lowrider-jog-rates';
     rates.style.cssText = 'grid-column:1/-1;grid-row:4;text-align:center;font-size:9px;opacity:.8;white-space:nowrap';
@@ -705,6 +706,7 @@
     const dialog=document.createElement('dialog');dialog.style.cssText='position:fixed;inset:0;margin:auto;width:380px;max-width:92vw;max-height:88dvh;overflow-y:auto;box-sizing:border-box;overscroll-behavior:contain;touch-action:pan-y;background:#252525;color:white;border:1px solid #777;border-radius:8px;padding:20px;font-family:Arial,sans-serif';
     const title=document.createElement('h3');title.textContent=titleText;dialog.append(title);
     dialog.addEventListener('close',()=>dialog.remove());
+    if(/^(Work light|Keep-out block|Stepper idle|Run speed|Jog speed)/i.test(titleText))dialog.addEventListener('click',e=>{const b=dialog.getBoundingClientRect();if(e.target===dialog&&(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom)&&!dialog.hasAttribute('aria-busy'))dialog.close();});
     const add=(label,fn,color='#202020')=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.style.cssText=`display:block;width:100%;min-height:44px;margin-top:10px;background:${color};color:white;border:1px solid #777;border-radius:4px;font-size:14px`;button.addEventListener('click',fn);dialog.append(button);return button;};
     return {dialog,add,open(){document.body.append(dialog);dialog.showModal();dialog.querySelector('button:last-child')?.focus({preventScroll:true});}};
   }
@@ -1144,7 +1146,8 @@
           }else applyRunSpeed(percent).catch(error=>homingNotice(error.message));
         }
         value.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();value.blur();}});
-        value.addEventListener('blur',()=>requestRunSpeed(value.value.trim()?Number(value.value):NaN));
+        value.readOnly=true;value.setAttribute('role','button');value.title='Open Run speed editor';
+        value.addEventListener('click',()=>{const modal=cncDialog('Run speed'),row=document.createElement('label'),edit=document.createElement('input');row.textContent='Run speed (%) ';edit.type='number';edit.inputMode='decimal';edit.min='1';edit.max='300';edit.value=value.value;edit.setAttribute('aria-label','Run speed percent');row.append(edit);modal.dialog.append(row);modal.add('Apply',()=>{const n=Number(edit.value);if(!edit.value.trim()||!Number.isFinite(n)||n<1||n>300){edit.setCustomValidity('Enter 1 to 300 percent');edit.reportValidity();return;}modal.dialog.close();requestRunSpeed(n);});modal.add('Cancel',()=>modal.dialog.close());modal.open();});
         const buttons={};
         for(const [action,label] of [['minus','▼'],['plus','▲'],['min','Min'],['half','50%'],['max','Max']]){
           const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.lowriderRunAction=action;

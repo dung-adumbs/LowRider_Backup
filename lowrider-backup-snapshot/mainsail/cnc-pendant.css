@@ -145,3 +145,10 @@ html[data-native-app=android] .pendant-header>a{top:22px}
 /* Balance status between centered navigation and right-side settings. */
 .pendant-header #pendant-live-state{text-align:center}
 
+
+/* Phone readability and editors positioned above the soft keyboard. */
+dialog{font-size:15px}dialog p,.dialog-feedback,.dialog-field,.macro-list button{font-size:14px}dialog input,dialog select{font-size:16px!important}dialog h3{font-size:19px}dialog .preflight-details{font-size:13px;line-height:1.45;max-height:25dvh;overflow:auto}dialog.cnc-keyboard-dialog{position:fixed!important;top:max(8px,env(safe-area-inset-top))!important;bottom:auto!important;margin:0 auto!important;max-height:calc(var(--keyboard-view-height,100dvh) - 16px)!important}.cnc-selected-file{width:100%;overflow-wrap:anywhere;white-space:normal;font-size:14px;text-align:left;padding:8px}.cnc-file-details>p{margin:5px 0}#pendant-stage-result{font-size:14px;white-space:normal;overflow-wrap:anywhere}#pendant-stage-card[data-result=blocked] #pendant-stage-result{color:#ffd27b}.cnc-keepout-enabled{background:#705800!important;color:#fff!important}.cnc-keepout-conflict{background:#aa2222!important;color:#fff!important;animation:keepout-pulse 1.6s ease-in-out infinite}@keyframes keepout-pulse{50%{box-shadow:inset 0 0 0 2px #ffd2d2}}@media(prefers-reduced-motion:reduce){.cnc-keepout-conflict{animation:none}}#pendant-motion-speed{line-height:1.45}#lowrider-feed-value[readonly]{cursor:pointer}
+
+.cnc-processing{border-left:4px solid #80c6ff;padding-left:12px;animation:processing-pulse 1.4s ease-in-out infinite}@keyframes processing-pulse{50%{opacity:.65}}@media(prefers-reduced-motion:reduce){.cnc-processing{animation:none}}
+
+#app .position-box .machine-position-entry,#app .position-box .v-input input[data-lowrider-position]{font-size:13px!important}.position-table-heading{font-size:10px!important}#app .position-box .machine-range,#app .position-box [id^=lowrider-range-]{font-size:10px!important}.cnc-project-stage>label{font-size:14px}.cnc-project-group small{font-size:12px}#lowrider-feed-factor,#lowrider-jog-rate{font-size:14px!important}
