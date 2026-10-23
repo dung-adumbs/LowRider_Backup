@@ -105,7 +105,14 @@
   for(const input of Object.values(inputs))input.addEventListener('input',()=>{ready=false;created='';create.disabled=true;stageCopy.disabled=true;summary.textContent='Settings changed. Preview again.';});
   m.dialog.addEventListener('close',()=>clearTimeout(watch));
  }
- async function files(){
+ function prepare(filename){
+  const m=ui().modal('Prepare stage');
+  m.insert(el('p','Check the fitted tool and work/tool zero before verification.'));
+  m.add('Stage & verify',async()=>{await stage(filename);m.dialog.close();});
+  m.add('Details',()=>files(filename));
+  m.add('View toolpath',()=>viewer(filename));
+ }
+ async function files(initialFilename=''){
   const m=ui().modal('Files / stage job'),search=el('input'),list=el('select'),details=el('div',undefined,'cnc-file-details');search.placeholder='Filter files';search.setAttribute('aria-label','Filter G-code files');search.className='file-search';list.size=6;list.className='file-list cnc-file-list';list.setAttribute('aria-label','G-code files');m.insert(search);
   const sortRow=el('label','Sort: ','dialog-field'),sort=el('select');sort.setAttribute('aria-label','File sort order');for(const [value,label] of [['newest','Date · newest first'],['oldest','Date · oldest first'],['az','Name · A–Z'],['za','Name · Z–A']]){const option=el('option',label);option.value=value;sort.append(option);}try{sort.value=localStorage.getItem('cnc-file-sort')||'newest';}catch(_){}if(!sort.value)sort.value='newest';sortRow.append(sort);m.insert(sortRow);m.insert(list);m.insert(details);
   let selected='',sequence=0,optimizer=null,thumbnailTimer=null;
@@ -129,7 +136,7 @@
     const known={estimated_time:'Estimated time (s)',object_height:'Reported height (mm)',slicer:'Generator',slicer_version:'Generator version'};for(const [key,label] of Object.entries(known))if(metadata[key]!==undefined)details.append(el('div',label+': '+metadata[key]));
     if(info.header_comments?.length){const fold=el('details'),summary=el('summary','Program comments / tool notes');fold.append(summary,el('pre',info.header_comments.join('\n'),'preflight-details'));details.append(fold);}
    }catch(error){if(token===sequence)details.replaceChildren(el('p',error.message));}}
-  try{const all=(await ui().api('/server/files/list?root=gcodes')).filter(f=>/\.(gcode|gco|gc|nc|ngc|tap)$/i.test(f.path));const renderFiles=()=>{const old=list.value;list.replaceChildren();const named=(a,b)=>a.path.split('/').pop().localeCompare(b.path.split('/').pop(),undefined,{numeric:true,sensitivity:'base'})||a.path.localeCompare(b.path);const ordered=all.filter(f=>f.path.toLowerCase().includes(search.value.toLowerCase())).sort((a,b)=>sort.value==='az'?named(a,b):sort.value==='za'?named(b,a):sort.value==='oldest'?a.modified-b.modified||named(a,b):b.modified-a.modified||named(a,b));for(const file of ordered){const item=el('option',file.path);item.value=file.path;item.disabled=/quarantine|old-machine-origin/i.test(file.path);list.append(item);}if([...list.options].some(o=>o.value===old))list.value=old;inspect();};search.addEventListener('input',renderFiles);sort.addEventListener('change',()=>{try{localStorage.setItem('cnc-file-sort',sort.value);}catch(_){}renderFiles();});list.addEventListener('change',inspect);renderFiles();
+  try{const all=(await ui().api('/server/files/list?root=gcodes')).filter(f=>/\.(gcode|gco|gc|nc|ngc|tap)$/i.test(f.path));const renderFiles=()=>{const old=list.value;list.replaceChildren();const named=(a,b)=>a.path.split('/').pop().localeCompare(b.path.split('/').pop(),undefined,{numeric:true,sensitivity:'base'})||a.path.localeCompare(b.path);const ordered=all.filter(f=>f.path.toLowerCase().includes(search.value.toLowerCase())).sort((a,b)=>sort.value==='az'?named(a,b):sort.value==='za'?named(b,a):sort.value==='oldest'?a.modified-b.modified||named(a,b):b.modified-a.modified||named(a,b));for(const file of ordered){const item=el('option',file.path);item.value=file.path;item.disabled=/quarantine|old-machine-origin/i.test(file.path);list.append(item);}if([...list.options].some(o=>o.value===old))list.value=old;inspect();};search.addEventListener('input',renderFiles);sort.addEventListener('change',()=>{try{localStorage.setItem('cnc-file-sort',sort.value);}catch(_){}renderFiles();});list.addEventListener('change',inspect);if(initialFilename)list.value=initialFilename;renderFiles();if(initialFilename&&[...list.options].some(o=>o.value===initialFilename)){list.value=initialFilename;inspect();}
    const picker=el('input');picker.type='file';picker.accept='.gcode,.gco,.gc,.nc,.ngc,.tap';picker.setAttribute('aria-label','Upload G-code');picker.style.cssText='width:100%;min-height:44px;margin:6px 0';const uploadRow=el('label','Upload G-code from this device:');uploadRow.append(picker);m.insert(uploadRow);const upload=picker;
    picker.addEventListener('change',async()=>{const file=picker.files?.[0];if(!file)return;upload.disabled=true;m.feedback.textContent='Uploading '+file.name+'…';try{
     if(!/\.(gcode|gco|gc|nc|ngc|tap)$/i.test(file.name))throw Error('Choose a G-code file.');
@@ -145,5 +152,6 @@
  }
  document.addEventListener('cnc-pendant-status',event=>{latest=event.detail;render();});new MutationObserver(mount).observe(document.documentElement,{childList:true,subtree:true});mount();
  async function poll(){await refresh();setTimeout(poll,1500);}poll();
- window.CncPreflight={files,resume,afterZero,canResume,isReturning,hasStagedFile:()=>!!state.filename,refresh};
+ window.CncPreflight={files,prepare,viewToolpath:viewer,resume,afterZero,canResume,isReturning,hasStagedFile:()=>!!state.filename,refresh};
 })();
+

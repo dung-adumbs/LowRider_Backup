@@ -170,7 +170,7 @@
   }
   const sections={
     async keepouts(){const m=modal('Keep-out areas'),panel=$('#lowrider-keepout-panel');if(panel){panel.style.setProperty('display','block','important');m.insert(panel);}else m.feedback.textContent='Settings are loading; close and try again.';m.dialog.addEventListener('close',()=>{if(panel){panel.style.removeProperty('display');$('.pendant-column').append(panel);}});},
-    async files(){if(!window.CncPreflight)throw Error('Verification controls are loading.');return window.CncPreflight.files();},
+    async files(){if(!window.CncPreflight)throw Error('Verification controls are loading.');return window.CncProjects?window.CncProjects.overview():window.CncPreflight.files();},
     async machine(){
       const reloadButton=()=>{const button=el('button','Reload pendant');button.type='button';button.addEventListener('click',()=>location.replace('/cnc-pendant.html?refresh='+Date.now()));return button;};
       const m=modal('Machine limits (current session)');m.insert(reloadButton());const appLinks=el('p');const download=el('a','Download Android preview app');download.href='/cnc-pendant.apk';download.download='CNC-Pendant-preview.apk';appLinks.append(download,document.createTextNode(' · '));const launch=el('a','Open installed Android app');launch.href='intent://open?url='+encodeURIComponent(location.origin)+'#Intent;scheme=cncpendant;package=org.mainsailcnc.pendant;end';appLinks.append(launch);m.insert(appLinks);const timeout=$('#lowrider-stepper-timeout-row');if(timeout){m.insert(timeout);m.dialog.addEventListener('close',()=>$('#pendant-auxiliary').append(timeout));}try{const s=(await api('/printer/objects/query?toolhead')).status.toolhead,inputs={};for(const [key,label,min,max] of [['max_velocity','Velocity mm/s',1,1000],['max_accel','Acceleration mm/s²',1,50000],['square_corner_velocity','Corner velocity mm/s',0,100],['minimum_cruise_ratio','Minimum cruise ratio',0,1]]){const row=el('label',label,'dialog-field'),value=el('input');value.type='number';value.min=min;value.max=max;value.step='any';value.value=s[key]??'';value.setAttribute('aria-label',label);if(s[key]===undefined)value.disabled=true;row.append(value);inputs[key]={value,min,max};m.insert(row);}m.insert(el('p','Session changes only; printer.cfg is not rewritten.'));
@@ -203,5 +203,6 @@
   }
   new MutationObserver(()=>{arrangePendant();for(const dialog of document.querySelectorAll('dialog')){if(!dialog.querySelector('.pendant-stop'))dialog.prepend(stopButton());if(dialog.querySelector('h3')?.textContent==='Home axes')homeEndstops(dialog);}const panel=$('.toolhead-control-panel');if(panel&&!fitted){new ResizeObserver(queueFit).observe(panel);fitted=true;}queueFit();}).observe(document.documentElement,{childList:true,subtree:true});queueFit();
 })();
+
 
 
