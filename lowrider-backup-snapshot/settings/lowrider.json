@@ -1,7 +1,7 @@
 {
   "keepout": [
     {
-      "enabled": true,
+      "enabled": false,
       "margin": 5,
       "name": "Front strip Y10-110",
       "safeZ": 50,
