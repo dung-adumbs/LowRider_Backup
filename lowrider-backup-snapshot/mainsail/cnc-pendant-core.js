@@ -218,7 +218,7 @@
     if(!toolhead||document.getElementById('lowrider-keepout-panel'))return;
     const panel=document.createElement('section');panel.id='lowrider-keepout-panel';panel.className='v-card v-sheet theme--dark';panel.style.cssText='padding:14px;margin:12px 0;background:#252525;color:white';
     const heading=document.createElement('h3');heading.textContent='Keep-out areas';heading.style.cssText='font-size:15px;margin:0 0 8px';panel.append(heading);
-    const note=document.createElement('p');note.textContent='Dashboard jogging only. All dimensions are machine coordinates in mm, fixed to the table. Blocks do not protect program files, console commands or homing. Clearance expands X/Y for the cutter and clamps. Changes apply to new jog commands, not moves already queued.';note.style.cssText='font-size:12px;line-height:1.4';panel.append(note);
+    const note=document.createElement('p');note.textContent='Machine coordinates in mm, fixed to the table. Enabled blocks guard pendant moves and are checked conservatively during job verification. Console commands and homing bypass these checks. Clearance expands X/Y for the cutter and clamps. Changes do not protect moves already queued.';note.style.cssText='font-size:12px;line-height:1.4';panel.append(note);
     const rows=document.createElement('div');panel.append(rows);
     const feedback=document.createElement('div');feedback.style.cssText='font-size:12px;padding-top:6px';panel.append(feedback);
     async function render(){

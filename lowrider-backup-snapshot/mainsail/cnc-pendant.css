@@ -152,3 +152,32 @@ dialog{font-size:15px}dialog p,.dialog-feedback,.dialog-field,.macro-list button
 .cnc-processing{border-left:4px solid #80c6ff;padding-left:12px;animation:processing-pulse 1.4s ease-in-out infinite}@keyframes processing-pulse{50%{opacity:.65}}@media(prefers-reduced-motion:reduce){.cnc-processing{animation:none}}
 
 #app .position-box .machine-position-entry,#app .position-box .v-input input[data-lowrider-position]{font-size:13px!important}.position-table-heading{font-size:10px!important}#app .position-box .machine-range,#app .position-box [id^=lowrider-range-]{font-size:10px!important}.cnc-project-stage>label{font-size:14px}.cnc-project-group small{font-size:12px}#lowrider-feed-factor,#lowrider-jog-rate{font-size:14px!important}
+
+/* Desktop dashboard: existing section builders dock as nonmodal panels. */
+html[data-workspace=true] body{overflow:auto!important}
+html[data-workspace=true] #cnc-workspace{display:grid;grid-template-columns:minmax(270px,1fr) minmax(340px,1.4fr) minmax(270px,1fr);gap:12px;padding:8px;align-items:start}
+#cnc-workspace>aside,#cnc-workspace>section{min-width:0}
+#cnc-workspace>aside{display:grid;gap:12px}
+html[data-workspace=true] .pendant-tabs{display:none!important}
+html[data-workspace=true] .pendant-header{height:58px;position:relative}
+html[data-workspace=true] .pendant-header>a{position:absolute;left:50%;top:29px;min-width:75px}
+html[data-workspace=true] .pendant-header #pendant-estop{font-size:15px;min-height:38px;width:86px}
+html[data-workspace=true] .pendant-header #pendant-fullscreen{display:none}
+html[data-workspace=true] .pendant-header #pendant-live-state{right:5px;left:calc(50% + 46px)}
+html[data-workspace=true] #pendant-viewport{position:relative;inset:auto;max-width:none;overflow:visible;margin:0}
+html[data-workspace=true] #pendant-scale{max-width:none;transform:none!important}
+html[data-workspace=true] dialog[data-docked]{position:static!important;display:block;inset:auto!important;margin:0!important;width:100%;max-width:none;max-height:none!important;padding:14px;overflow:visible;background:#222;border-color:#444;border-radius:6px}
+html[data-workspace=true] dialog[data-docked] h3{font-size:18px;margin-bottom:12px}
+html[data-workspace=true] dialog[data-docked] p{font-size:14px;overflow-wrap:anywhere}
+html[data-workspace=true] dialog[data-docked] .dialog-actions{gap:7px}
+html[data-workspace=true] dialog[data-docked] .dialog-actions button{flex:1 1 100px;font-size:14px}
+html[data-workspace=true] dialog[data-docked] .dialog-actions button[hidden]{display:none}
+html[data-workspace=true] dialog[data-docked] .console-output{height:390px;max-height:45vh;font-size:13px;overflow:auto;overflow-wrap:anywhere}
+html[data-workspace=true] dialog[data-docked] .macro-list{max-height:400px;overflow:auto}
+html[data-workspace=true] dialog[data-docked] .cnc-project-group{width:100%;overflow-wrap:anywhere}
+html[data-workspace=true] .cnc-machine-temperatures{padding:9px;border-radius:4px;background:#192b36;color:#c5ebcd;font-weight:bold}
+html[data-workspace=true] .cnc-keyboard-dialog[data-docked]{position:static!important}
+
+html[data-workspace=true] .cnc-app-links{display:none}
+html[data-workspace=true] [data-docked=keepouts] #lowrider-keepout-panel{padding:0!important;margin:0!important;background:transparent!important}
+html[data-workspace=true] [data-docked=keepouts] #lowrider-keepout-panel>h3{display:none}
