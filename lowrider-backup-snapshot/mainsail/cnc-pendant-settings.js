@@ -1,8 +1,8 @@
 /* Shared machine preferences, persisted in Moonraker. No motion commands. */
 (() => {
   'use strict';
-  const defaults={units:'mm',jogSpeed:50,jogScale:'coarse',safeJogZ:5,belowZ5Cap:30};
-  const valid=(key,value)=>key==='units'?['mm','cm','in'].includes(value):key==='jogScale'?['coarse','fine'].includes(value):typeof value==='number'&&Number.isFinite(value)&&(key==='jogSpeed'?value>=10&&value<=100:key==='belowZ5Cap'?value>=1&&value<=100:key==='safeJogZ'?value>=0&&value<=10000:false);
+  const defaults={units:'mm',jogSpeed:50,jogScale:'coarse',safeJogZ:5,belowZ5Cap:30,temperatureWarning:75};
+  const valid=(key,value)=>key==='units'?['mm','cm','in'].includes(value):key==='jogScale'?['coarse','fine'].includes(value):typeof value==='number'&&Number.isFinite(value)&&(key==='jogSpeed'?value>=10&&value<=100:key==='belowZ5Cap'?value>=1&&value<=100:key==='temperatureWarning'?value>=40&&value<=85&&Number.isInteger(value):key==='safeJogZ'?value>=0&&value<=10000:false);
   const values={...defaults},pending=new Map(),deferred={};let ready=false,sequence=0,polling=false;
   const emit=(key,value)=>document.dispatchEvent(new CustomEvent('cnc-shared-setting',{detail:{key,value}}));
   async function request(method,key,value){const r=await fetch('/server/database/item'+(method==='GET'?'?namespace=cnc_pendant':''),{method,cache:'no-store',signal:AbortSignal.timeout(5000),...(method==='POST'?{headers:{'Content-Type':'application/json'},body:JSON.stringify({namespace:'cnc_pendant',key,value})}:{})});const data=await r.json();if(!r.ok||data.error){if(method==='GET'&&r.status===404)return {};throw Error('Shared settings unavailable');}return data.result?.value||{};}

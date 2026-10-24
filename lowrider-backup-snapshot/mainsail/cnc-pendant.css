@@ -181,3 +181,10 @@ html[data-workspace=true] .cnc-keyboard-dialog[data-docked]{position:static!impo
 html[data-workspace=true] .cnc-app-links{display:none}
 html[data-workspace=true] [data-docked=keepouts] #lowrider-keepout-panel{padding:0!important;margin:0!important;background:transparent!important}
 html[data-workspace=true] [data-docked=keepouts] #lowrider-keepout-panel>h3{display:none}
+
+.cnc-machine-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cnc-machine-temperatures{font-size:13px!important;padding:5px 8px!important;min-height:30px!important;border:1px solid #4d7180;border-radius:4px;background:#192b36;color:#c5ebcd;font-weight:bold;white-space:nowrap}
+html[data-workspace=true] .cnc-machine-heading .cnc-machine-temperatures{padding:5px 8px;font-size:13px}
+.cnc-machine-temperatures.cnc-temperature-hot{background:#a32222!important;color:white!important;border-color:#ff9999;animation:cnc-temperature-pulse 1.6s ease-in-out infinite}
+@keyframes cnc-temperature-pulse{50%{box-shadow:0 0 0 2px #ffb0b0;background:#641818}}
+@media(prefers-reduced-motion:reduce){.cnc-machine-temperatures.cnc-temperature-hot{animation:none}}

@@ -3,5 +3,6 @@
   "jogScale": "coarse",
   "jogSpeed": 50,
   "safeJogZ": 25,
+  "temperatureWarning": 75,
   "units": "mm"
 }
