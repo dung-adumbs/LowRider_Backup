@@ -1,6 +1,6 @@
 """Moonraker-owned CNC staging and preflight gate. GPL-3.0-or-later."""
 from __future__ import annotations
-import asyncio, datetime, hashlib, json, math, pathlib, uuid, logging
+import asyncio, datetime, hashlib, json, math, pathlib, uuid, logging, os
 from ..common import RequestType
 from .cnc_gcode_scan import scan_file, metadata_from_header, fingerprints, evaluate_bounds, thumbnail_data_url, keepout_interferences
 from .cnc_travel_optimize import inspect_header, optimize_bytes, MAX_BYTES
@@ -13,8 +13,50 @@ class CNCPreflight:
         self.profile_path=pathlib.Path(config.get('profile_path','~/printer_data/config/cnc_preflight_profile.json')).expanduser()
         self.job={'state':'empty','message':'Select and stage a file.'};self.model=None;self.generation=0;self.scan_lock=asyncio.Lock();self.action_lock=asyncio.Lock();self.bounds_cache={};self.initial_machine=None;self.operation={'state':'idle'};self.operation_task=None
         self.optimization={'state':'idle'};self.optimization_task=None;self.thumbnail_task=None;self.thumbnail_cancel=False;self.thumbnail_cache={}
-        for name,method in [('inspect',RequestType.GET),('stage',RequestType.POST),('status',RequestType.GET),('verify',RequestType.POST),('start',RequestType.POST),('resume',RequestType.POST),('clear',RequestType.POST),('optimize',RequestType.POST),('optimization',RequestType.GET),('thumbnail',RequestType.GET)]:
+        for name,method in [('inspect',RequestType.GET),('stage',RequestType.POST),('status',RequestType.GET),('verify',RequestType.POST),('start',RequestType.POST),('resume',RequestType.POST),('clear',RequestType.POST),('optimize',RequestType.POST),('optimization',RequestType.GET),('thumbnail',RequestType.GET),('archive_restore',RequestType.POST)]:
             self.server.register_endpoint('/machine/cnc_preflight/'+name,method,getattr(self,'_'+name))
+    def _archive_entry(self,archive_id,filename,expected):
+        # The client selects an entry; it never supplies an absolute disk path.
+        if not archive_id or len(archive_id)>80 or any(c not in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-' for c in archive_id):
+            raise self.server.error('Invalid archive ID.',400)
+        relative=pathlib.PurePosixPath(filename)
+        if not filename or relative.is_absolute() or '..' in relative.parts or any(c in filename for c in '\r\n\x00\\'):
+            raise self.server.error('Invalid archived filename.',400)
+        base=self.root.parent/'cnc_archives';folder=base/archive_id
+        if base.is_symlink() or folder.is_symlink():raise self.server.error('Archive links are not supported.',400)
+        manifest=json.loads((folder/'manifest.json').read_text())
+        matches=[row for row in manifest.get('files',[]) if row.get('relative_path')==filename and row.get('sha256')==expected]
+        if len(matches)!=1:raise self.server.error('Archive entry changed; reopen the archive.',409)
+        row=matches[0]
+        # The manifest retains the exact checksum-verified storage path.
+        stored=pathlib.Path(row.get('archive_path',''))
+        if not stored.is_absolute() or not stored.is_relative_to(folder):raise self.server.error('Invalid archive manifest path.',400)
+        source=stored
+        if not source.resolve().is_relative_to(folder.resolve()) or any(p.is_symlink() for p in [source,*source.parents] if p!=base.parent):
+            raise self.server.error('Archive links are not supported.',400)
+        if not source.is_file() or source.stat().st_size!=row.get('size') or source.stat().st_size>64*1024*1024:
+            raise self.server.error('Archived file size differs or exceeds the restore limit.',409)
+        if len(expected)!=64 or any(c not in '0123456789abcdef' for c in expected):raise self.server.error('Invalid checksum.',400)
+        return source,row
+    async def _archive_restore(self,request):
+        async with self.action_lock:
+            self._optimization_idle(await self._snapshot())
+            filename=request.get_str('filename');source,row=self._archive_entry(request.get_str('archive_id'),filename,request.get_str('sha256'))
+            data=await asyncio.to_thread(source.read_bytes)
+            if hashlib.sha256(data).hexdigest()!=row['sha256']:raise self.server.error('Archive checksum differs; nothing restored.',409)
+            if getattr(self,'job',{}).get('filename')==filename:raise self.server.error('Clear this staged file before restoring.',409)
+            dest=self.root/filename
+            if not dest.resolve().is_relative_to(self.root) or any(p.is_symlink() for p in [dest,*dest.parents] if p!=self.root.parent):
+                raise self.server.error('Restore links are not supported.',400)
+            self._optimization_idle(await self._snapshot())
+            dest.parent.mkdir(parents=True,exist_ok=True)
+            try:
+                # Exclusive create refuses overwrites, including a racing upload.
+                with dest.open('xb') as out:out.write(data);out.flush();os.fsync(out.fileno())
+            except FileExistsError:raise self.server.error('A file already exists at the original path; nothing overwritten.',409)
+            if hashlib.sha256(dest.read_bytes()).hexdigest()!=row['sha256']:
+                raise self.server.error('Restored checksum differs. Preserve and inspect the restored copy.',500)
+            return {'filename':filename,'sha256':row['sha256'],'size':len(data),'archive_retained':True,'message':'Restored copy verified. Review and stage it before any Start.'}
     def _path(self,filename):
         if not filename or any(c in filename for c in '\r\n\x00\"\'\\{}') or len(filename)>512:raise self.server.error('Invalid filename',400)
         path=(self.root/filename).resolve()
