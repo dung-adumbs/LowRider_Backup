@@ -53,6 +53,11 @@
     const ready=s?.webhooks?.state==='ready',live=s?.motion_report?.live_velocity,feed=s?.gcode_move?.speed,factor=s?.gcode_move?.speed_factor;
     const target=Number.isFinite(feed)&&Number.isFinite(factor)?feed*factor/60:null;
     const text='Programmed '+(ready&&Number.isFinite(feed)?(feed/60).toFixed(1):'—')+' mm/s · Override '+(ready&&Number.isFinite(factor)?Math.round(factor*100):'—')+'% · Adjusted '+(ready&&target!==null?target.toFixed(1):'—')+' mm/s · Live '+(ready&&Number.isFinite(live)?live.toFixed(1):'—')+' mm/s';if(readout.textContent!==text)readout.textContent=text;
+    let limits=$('#pendant-motion-limits');if(!limits){limits=el('div');limits.id='pendant-motion-limits';limits.title='Current Klipper session limits; axis limits and acceleration can reduce actual motion speed.';bar.append(limits);}
+    const limit=(key,digits=0)=>ready&&Number.isFinite(s?.toolhead?.[key])?s.toolhead[key].toFixed(digits):'—';
+    const limitText='Limits · Speed '+limit('max_velocity',1)+' mm/s · Accel '+limit('max_accel')+' mm/s² · Corner '+limit('square_corner_velocity',1)+' mm/s · Cruise '+(ready&&Number.isFinite(s?.toolhead?.minimum_cruise_ratio)?Math.round(s.toolhead.minimum_cruise_ratio*100)+'%':'—');
+    if(limits.textContent!==limitText)limits.textContent=limitText;
+
   });
   document.addEventListener('cnc-pendant-status',event=>{
     const s=event.detail;latest=s;const ready=s?.webhooks?.state==='ready',active=!!s?.pause_resume?.is_paused||['paused','printing'].includes(s?.print_stats?.state);$('#pendant-live-state').textContent=!ready?'Disconnected / controller not ready':(s.pause_resume?.is_paused||s.print_stats?.state==='paused'?'Paused':s.print_stats?.state==='printing'?'Running':['x','y','z'].every(axis=>s.toolhead?.homed_axes?.includes(axis))?'Ready':'Not homed')+(active&&s.print_stats?.filename?' · '+s.print_stats.filename:'');

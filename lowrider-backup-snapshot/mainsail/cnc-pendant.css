@@ -273,3 +273,12 @@ html[data-workspace=true] dialog[data-docked] .console-output{height:clamp(120px
  html:not([data-workspace=true]) .pendant-header>a{top:22px}
  html:not([data-workspace=true]) .pendant-header #pendant-estop{width:84px;min-height:34px;font-size:13px}
 }
+
+/* Keep progress anchored while speed strings change width. */
+#pendant-job-motion-summary{display:grid!important;grid-template-columns:104px minmax(0,1fr) auto;gap:6px!important;align-items:center;font-variant-numeric:tabular-nums}
+#pendant-job-percent{grid-column:1;grid-row:1;width:100%;text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+#pendant-motion-speed{grid-column:2;grid-row:1;min-width:0;overflow-wrap:anywhere}
+#pendant-job-motion-summary>.cnc-health-indicator{grid-column:3;grid-row:1}
+#pendant-motion-limits{grid-column:1 / -1;font-size:13px;line-height:1.4;color:#ccc;text-align:center;font-variant-numeric:tabular-nums}
+
+@media(max-width:799px){#pendant-job-motion-summary{grid-template-columns:80px minmax(0,1fr) auto}#pendant-job-percent{font-size:32px}}
