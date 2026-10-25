@@ -222,3 +222,26 @@ html[data-workspace=true] .cnc-files-heading>button{font-size:12px;min-height:28
 html[data-workspace=true] .dialog-feedback:empty{display:none}
 html[data-workspace=true] dialog[data-docked] details>summary{font-size:13px;cursor:pointer;margin:5px 0}
 html[data-workspace=true] [data-docked=files] .dialog-actions button{flex-basis:65px}
+
+/* Hardware health: same dialog and indicator on compact/desktop views. */
+#app .cnc-health-indicator{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;color:#aaa;background:#202a30;border:1px solid #70808a;border-radius:5px;padding:2px 5px;min-height:32px;line-height:1}
+#app #pendant-health{grid-column:7;grid-row:2;align-self:start;justify-self:end}
+#app .cnc-health-indicator small{font-size:10px;color:#ddd}
+#app .cnc-health-indicator[data-state=normal]{color:#56dc76}
+#app .cnc-health-indicator[data-state=warning]{color:#ffce49;animation:cnc-health-pulse .6s infinite alternate}
+#app .cnc-health-indicator[data-state=fault]{color:#ff6666;animation:cnc-health-pulse .35s infinite alternate}
+#pendant-job-health{float:right;margin:3px}
+.cnc-health-readings{max-height:42dvh;overflow:auto;font-size:14px}
+.cnc-health-row{display:flex;justify-content:space-between;gap:12px;padding:7px 3px;border-bottom:1px solid #555}
+.cnc-health-row span{text-align:right}
+.cnc-health-warning,.cnc-health-summary[data-state=fault],.cnc-health-summary[data-state=warning]{color:#ffd16a;background:#573623}
+.cnc-health-unknown{color:#bbb;font-size:12px}
+@keyframes cnc-health-pulse{to{background:#694c2a;box-shadow:0 0 5px currentColor}}
+@media(prefers-reduced-motion:reduce){#app .cnc-health-indicator{animation:none!important}}
+
+.cnc-tool-review .cnc-tool-specs{max-height:38dvh;overflow:auto;margin:8px 0;font-size:14px}
+.cnc-tool-specs>div{display:flex;justify-content:space-between;gap:14px;padding:6px 0;border-bottom:1px solid #555}
+.cnc-tool-specs>div span{text-align:right;overflow-wrap:anywhere}
+.cnc-tool-specs>div:first-child{display:block;background:#503b20;padding:6px}
+.cnc-tool-specs>div:first-child span{display:block;text-align:left;margin-top:4px}
+.cnc-tool-review>label{display:block;line-height:1.4;margin:10px 0}

@@ -4,6 +4,7 @@ import asyncio, datetime, hashlib, json, math, pathlib, uuid, logging, os
 from ..common import RequestType
 from .cnc_gcode_scan import scan_file, metadata_from_header, fingerprints, evaluate_bounds, thumbnail_data_url, keepout_interferences
 from .cnc_travel_optimize import inspect_header, optimize_bytes, MAX_BYTES
+from .cnc_health import CNCHealth
 
 class CNCPreflight:
     def __init__(self,config):
@@ -13,6 +14,7 @@ class CNCPreflight:
         self.profile_path=pathlib.Path(config.get('profile_path','~/printer_data/config/cnc_preflight_profile.json')).expanduser()
         self.job={'state':'empty','message':'Select and stage a file.'};self.model=None;self.generation=0;self.scan_lock=asyncio.Lock();self.action_lock=asyncio.Lock();self.bounds_cache={};self.initial_machine=None;self.operation={'state':'idle'};self.operation_task=None
         self.optimization={'state':'idle'};self.optimization_task=None;self.thumbnail_task=None;self.thumbnail_cancel=False;self.thumbnail_cache={}
+        self.health=CNCHealth(self.server,self.api,config)
         for name,method in [('inspect',RequestType.GET),('stage',RequestType.POST),('status',RequestType.GET),('verify',RequestType.POST),('start',RequestType.POST),('resume',RequestType.POST),('clear',RequestType.POST),('optimize',RequestType.POST),('optimization',RequestType.GET),('thumbnail',RequestType.GET),('archive_restore',RequestType.POST)]:
             self.server.register_endpoint('/machine/cnc_preflight/'+name,method,getattr(self,'_'+name))
     def _archive_entry(self,archive_id,filename,expected):
@@ -223,6 +225,10 @@ class CNCPreflight:
         fit=evaluate_bounds({**box,'section':0,'label':'Metadata'},offset,tool['axis_minimum'],tool['axis_maximum'])
         return {**fit,'available':True,'message':'PRELIMINARY: header bounds exceed current travel.' if not fit['fits'] else 'PRELIMINARY: header bounds fit; full scan still required.'}
     async def _check(self,s,paused=False,hash_check=False):
+        health=getattr(self,'health',None)
+        if health:
+            blocked=await health.blocked()
+            if blocked:return {'approved':False,'reason':blocked}
         model=self.model;generation=self.generation;job_id=self.job.get('id');filename=self.job.get('filename')
         if model is None:return {'approved':False,'reason':'Analysis is not complete.'}
         if model.issues:return {'approved':False,'reason':'Cannot fully verify: '+model.issues[0]['message'],'issues':model.issues}
@@ -280,6 +286,10 @@ class CNCPreflight:
             if generation!=self.generation or fresh['gcode_move']['position'][:3]!=s['gcode_move']['position'][:3] or fresh['gcode_move']['gcode_position'][:3]!=s['gcode_move']['gcode_position'][:3]:raise self.server.error('Position or zero changed during verification. Try again.',409)
             reason=self._idle_reason(fresh,resume)
             if reason:raise self.server.error(reason,409)
+            health=getattr(self,'health',None)
+            if health:
+                blocked=await health.blocked()
+                if blocked:raise self.server.error(blocked,409)
             blocks=await self.server.lookup_component('database').get_item('lowrider','keepout',[])
             if hashlib.sha256(json.dumps(blocks,sort_keys=True).encode()).hexdigest()!=result.get('keepout_sha256'):raise self.server.error('Keep-out settings changed during verification. Verify again.',409)
             gm=fresh['gcode_move'];offset=[a-b for a,b in zip(gm['position'][:3],gm['gcode_position'][:3])]
