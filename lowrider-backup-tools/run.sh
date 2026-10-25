@@ -8,6 +8,17 @@ exec 9>"$HOME/lowrider-backup-tools/run.lock"
 flock -n 9 || exit 0
 exec >"$HOME/lowrider-backup-tools/last-run.log" 2>&1
 trap 'result=$?; printf "Exit status: %s at %s\n" "$result" "$(date -Is)"; exit "$result"' EXIT
+# Admission only: a later job can still start after this check.
+if python3 "$HOME/lowrider-backup-tools/idle_guard.py"; then
+    :
+else
+    guard_status=$?
+    if [ "$guard_status" -eq 75 ]; then exit 0; fi
+    exit "$guard_status"
+fi
+# Give motion/controller work priority; descendants inherit these settings.
+renice -n 15 -p $$ >/dev/null 2>&1 || true
+if command -v ionice >/dev/null 2>&1; then ionice -c 3 -p $$ || true; fi
 echo "Backup started $(date -Is)"
 python3 "$HOME/lowrider-backup-tools/prepare.py"
 mkdir -p "$HOME/config_backup"
