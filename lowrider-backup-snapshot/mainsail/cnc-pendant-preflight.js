@@ -83,7 +83,7 @@
  }
  function viewer(filename){const m=ui().modal('Toolpath viewer');m.dialog.classList.add('pendant-viewer-dialog');const name=el('p',filename,'pendant-viewer-filename');name.title=filename;m.insert(name);const frame=el('iframe');frame.title='Mainsail G-code toolpath viewer';frame.src='/viewer?filename='+encodeURIComponent('gcodes/'+filename);frame.className='preflight-viewer';m.insert(frame);m.insert(el('p','Visualization is not verification. Enable travel visibility for CNC paths.','pendant-viewer-note'));}
  function optimizeTravel(filename,parentDialog,onCreated=null,prepareSource=null,options={}){
-  const m=ui().modal('Optimize marked travel'),summary=el('pre','Preview before creating a copy.','preflight-details');m.insert(el('p',filename));
+  const m=ui().modal(options.automatic?'Prepare program':'Optimize marked travel'),summary=el('pre','Preview before creating a copy.','preflight-details');m.insert(el('p',filename));
   m.insert(el('p','Only versioned Fusion travel markers are eligible. Cutting, plunge and unproven moves keep their feeds. The original stays unchanged. Rates are mm/min; run-speed override still applies.'));
   const starting={xy_feed:options.rates?.xy_feed??window.CncSettings?.get('travelXY')??3000,z_feed:options.rates?.z_feed??window.CncSettings?.get('travelZ')??180};
   m.insert(el('p',options.rates?'Using this project’s previous travel rates.':'Starting travel values; review for this machine and fixtures.'));
@@ -91,10 +91,11 @@
    const row=el('label',label,'dialog-field'),input=el('input');input.type='number';input.inputMode='decimal';input.min=1;input.max=max;input.value=value;input.setAttribute('aria-label',label);row.append(input);m.insert(row);inputs[key]=input;
   }
   const remember=el('input');remember.type='checkbox';const rememberLabel=el('label',' Remember these as my shared travel defaults.');rememberLabel.prepend(remember);m.insert(rememberLabel);
-  m.insert(summary);let toolReview=null,reviewHash='';let prepared=!prepareSource,recorded='',identity='',ready=false,created='',watch=null,working=false;
+  m.insert(summary);let toolReview=null,reviewHash='';let prepared=!prepareSource,recorded='',identity='',autoCreating=false,ready=false,created='',watch=null,working=false;
   const values=()=>{const v={};for(const [key,input] of Object.entries(inputs)){const n=Number(input.value);if(!input.value.trim()||!Number.isFinite(n)||n<1||n>Number(input.max))throw Error('Enter valid travel rates.');v[key]=String(n);}return v;};
   const render=result=>{
-   ready=result.state==='preview';if(ready&&reviewHash&&result.source_sha256!==reviewHash){ready=false;working=false;toolReview=null;reviewHash='';preview.disabled=false;for(const input of Object.values(inputs))input.disabled=false;summary.classList.remove('cnc-processing');summary.textContent='Source changed after tool review. Preview again to review the current file.';create.disabled=true;stageCopy.disabled=true;return;}working=result.state==='working';summary.classList.toggle('cnc-processing',working);created=result.state==='created'?result.filename:'';
+   ready=result.state==='preview';if(ready&&reviewHash&&result.source_sha256!==reviewHash){ready=false;working=false;toolReview=null;reviewHash='';preview.disabled=false;for(const input of Object.values(inputs))input.disabled=false;summary.classList.remove('cnc-processing');m.dialog.querySelector('.dialog-actions button').disabled=false;m.dialog.removeAttribute('aria-busy');summary.textContent='Source changed after tool review. Preview again to review the current file.';create.disabled=true;stageCopy.disabled=true;return;}working=result.state==='working';summary.classList.toggle('cnc-processing',working);created=result.state==='created'?result.filename:'';
+   m.dialog.toggleAttribute('aria-busy',working);const close=m.dialog.querySelector('.dialog-actions button');if(options.automatic)close.disabled=working;
    for(const input of Object.values(inputs))input.disabled=working;
    preview.disabled=working;create.disabled=!ready;stageCopy.disabled=!created;
    if(result.state==='working')summary.textContent='Preparing travel preview in the background…';
@@ -104,7 +105,7 @@
      `Nominal motion: ${result.nominal_before_seconds}s → ${result.nominal_after_seconds}s at 100%`,
      'Estimate excludes pauses, acceleration, controller limits and unknown initial moves.',created?`New file: ${created}`:''].filter(Boolean).join('\n');
   };
-  const poll=async()=>{if(!m.dialog.open)return;try{const r=await api('optimization');if(r.id!==identity)throw Error('Another client replaced this preview. Preview again.');render(r);if(created&&recorded!==created){stageCopy.disabled=true;const rates={xy_feed:Number(r.xy_feed),z_feed:Number(r.z_feed)};if(remember.checked){if(!window.CncSettings)throw Error('Shared settings unavailable.');await window.CncSettings.set('travelXY',rates.xy_feed);await window.CncSettings.set('travelZ',rates.z_feed);}if(onCreated)await onCreated(created,{rates,tool_review:toolReview});recorded=created;stageCopy.disabled=false;}if(working)watch=setTimeout(poll,750);}catch(error){working=false;preview.disabled=false;m.feedback.textContent=error.message;}};
+  const poll=async()=>{if(!m.dialog.open)return;try{const r=await api('optimization');if(r.id!==identity)throw Error('Another client replaced this preview. Preview again.');render(r);if(options.automatic&&ready&&!autoCreating){autoCreating=true;await request('create');return;}if(created&&recorded!==created){stageCopy.disabled=true;const rates={xy_feed:Number(r.xy_feed),z_feed:Number(r.z_feed)};if(remember.checked){if(!window.CncSettings)throw Error('Shared settings unavailable.');await window.CncSettings.set('travelXY',rates.xy_feed);await window.CncSettings.set('travelZ',rates.z_feed);}if(onCreated)await onCreated(created,{rates,tool_review:toolReview});recorded=created;stageCopy.disabled=false;if(options.automatic){summary.textContent='Program prepared. Original posts are preserved. Stage & verify when your machine setup is ready.';m.dialog.querySelector('h3').textContent='Program prepared';}}if(working)watch=setTimeout(poll,750);}catch(error){working=false;preview.disabled=false;stageCopy.disabled=true;m.dialog.querySelector('.dialog-actions button').disabled=false;m.dialog.removeAttribute('aria-busy');summary.classList.remove('cnc-processing');m.feedback.textContent=error.message;}};
   async function request(mode){const rates=values();ready=false;create.disabled=true;stageCopy.disabled=true;
    try{
     if(!prepared){working=true;preview.disabled=true;for(const input of Object.values(inputs))input.disabled=true;summary.classList.add('cnc-processing');summary.textContent='Processing… checking and combining source files.';await new Promise(resolve=>setTimeout(resolve,20));const built=await prepareSource(message=>summary.textContent='Processing… '+message);filename=typeof built==='string'?built:built.filename;toolReview=built.tool_review||null;reviewHash=built.sha256||'';prepared=true;}
@@ -114,7 +115,15 @@
   }
   const preview=m.add('Preview',()=>request('preview')),create=m.add('Create optimized copy',async()=>{if(!ready)throw Error('Preview the current settings first.');try{await request('create');}finally{setTimeout(()=>{create.disabled=!ready;},0);}}),stageCopy=m.add('Stage & verify copy',async()=>{if(!created)throw Error('Create a copy first.');await stage(created);m.dialog.close();parentDialog?.close();});create.disabled=true;stageCopy.disabled=true;
   for(const input of Object.values(inputs))input.addEventListener('input',()=>{ready=false;created='';create.disabled=true;stageCopy.disabled=true;summary.textContent='Settings changed. Preview again.';});
-  m.dialog.addEventListener('close',()=>clearTimeout(watch));
+  if(options.automatic){
+   for(const paragraph of [...m.dialog.children].filter(e=>e.tagName==='P'&&e!==summary&&!e.classList.contains('dialog-feedback')))paragraph.hidden=true;
+   summary.textContent='Preparing selected stages…';
+   for(const input of Object.values(inputs))input.closest('label').hidden=true;rememberLabel.hidden=true;preview.hidden=true;create.hidden=true;stageCopy.textContent='Stage & verify';
+   // Settings were reviewed on the batch screen; preview/create remain backend checks.
+   m.dialog.querySelector('.dialog-actions button').disabled=true;
+   setTimeout(()=>request('preview').catch(error=>{m.feedback.textContent=error.message;m.dialog.querySelector('.dialog-actions button').disabled=false;m.dialog.removeAttribute('aria-busy');}),0);
+  }
+  m.dialog.addEventListener('close',()=>{clearTimeout(watch);if(options.onClose)options.onClose();});
  }
  function prepare(filename){
   const m=ui().modal('Prepare stage');
@@ -165,6 +174,6 @@
  }
  document.addEventListener('cnc-pendant-status',event=>{latest=event.detail;render();});new MutationObserver(mount).observe(document.documentElement,{childList:true,subtree:true});mount();
  async function poll(){await refresh();setTimeout(poll,1500);}poll();
- window.CncPreflight={files,prepare,optimizeTravel,viewToolpath:viewer,resume,afterZero,canResume,isReturning,hasStagedFile:()=>!!state.filename,refresh};
+ window.CncPreflight={files,prepare,stage,optimizeTravel,viewToolpath:viewer,resume,afterZero,canResume,isReturning,hasStagedFile:()=>!!state.filename,refresh};
 })();
 

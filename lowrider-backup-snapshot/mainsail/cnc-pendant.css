@@ -282,3 +282,14 @@ html[data-workspace=true] dialog[data-docked] .console-output{height:clamp(120px
 #pendant-motion-limits{grid-column:1 / -1;font-size:13px;line-height:1.4;color:#ccc;text-align:center;font-variant-numeric:tabular-nums}
 
 @media(max-width:799px){#pendant-job-motion-summary{grid-template-columns:80px minmax(0,1fr) auto}#pendant-job-percent{font-size:32px}}
+
+.cnc-batch-prepare{width:470px;padding:12px;max-height:calc(100dvh - 16px)}
+.cnc-batch-prepare p{margin:6px 0}.cnc-batch-heading{font-weight:bold;overflow-wrap:anywhere}
+.cnc-batch-stages{max-height:28dvh;overflow:auto;margin:6px 0}
+.cnc-batch-stage{display:grid;grid-template-columns:minmax(0,1fr) 34px 34px;gap:4px;padding:5px 0;border-bottom:1px solid #444;align-items:center}
+.cnc-batch-stage>details{grid-column:1/-1;font-size:13px}.cnc-batch-stage>label{font-size:14px}
+.cnc-batch-prepare .dialog-field{margin:5px 0}.cnc-batch-prepare .cnc-batch-help{font-size:12px}
+.cnc-batch-prepare input[type=checkbox]{min-height:0;width:18px;height:18px;vertical-align:middle}
+.cnc-batch-prepare .dialog-field input{width:140px}.cnc-batch-prepare details>button{margin:4px}
+
+.cnc-batch-stages{max-height:34dvh}.cnc-batch-stage{padding:4px 0}.cnc-batch-stage>button{min-height:28px}.cnc-batch-prepare .cnc-project-check{font-size:13px}
