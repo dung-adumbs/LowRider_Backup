@@ -209,6 +209,7 @@ class CNCPreflight:
                 if generation==self.generation:self.job.update(state='error',message=str(error))
     async def _status(self,request):
         result=dict(self.job)
+        result['capabilities']={'resume_run_percent':True}
         result['operation']=dict(getattr(self,'operation',{'state':'idle'}))
         try:
             s=await self._snapshot(config=self.model is not None);paused=s.get('pause_resume',{}).get('is_paused',False)
@@ -279,6 +280,13 @@ class CNCPreflight:
         async with self.action_lock:
             if getattr(self,'operation',{}).get('state')=='returning':raise self.server.error('Resume return is already in progress. Do not send another Resume.',409)
             if request.get_str('stage_id')!=self.job.get('id'):raise self.server.error('The staged file changed. Review the new selection.',409)
+            run_percent=None
+            if resume:
+                value=request.get_str('run_percent',None)
+                if value is not None:
+                    try:run_percent=float(value)
+                    except (ValueError,TypeError):raise self.server.error('Choose a valid Resume run speed.',400)
+                    if not math.isfinite(run_percent) or not 1<=run_percent<=300:raise self.server.error('Resume run speed must be between1and300%.',400)
             generation=self.generation;s=await self._snapshot(True);result=await self._check(s,resume,True)
             if not result.get('approved'):raise self.server.error(result.get('reason','Verification failed')+' '+ '; '.join(v['message'] for v in result.get('violations',[])+result.get('return_violations',[])),409)
             # Re-read after hashing/analysis to catch any concurrent origin/jog change.
@@ -299,6 +307,7 @@ class CNCPreflight:
                 commands.append(f'SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=machine_{axis} VALUE={gm["position"][i]:.9f}')
             commands.append(f'SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=expires VALUE={fresh["toolhead"]["estimated_print_time"]+5:.6f}')
             if resume:
+                if run_percent is not None:commands.append(f'SET_GCODE_VARIABLE MACRO=PAUSE_BASE VARIABLE=factor VALUE={run_percent/100:.9f}')
                 commands.extend(['SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=resume_approved VALUE=1','RESUME'])
             else:
                 name=self.job['filename'];commands.extend([f'SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=filename VALUE=\'"{name}"\'','SET_GCODE_VARIABLE MACRO=_CNC_PREFLIGHT_STATE VARIABLE=start_approved VALUE=1',f'SDCARD_PRINT_FILE FILENAME="{name}"']);self.initial_machine=gm['position'][:3]

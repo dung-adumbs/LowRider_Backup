@@ -48,19 +48,10 @@
 
   window.addEventListener('resize',queueFit);window.visualViewport?.addEventListener('resize',queueFit);
   document.addEventListener('cnc-pendant-status',event=>{
-    const s=event.detail,bar=$('#pendant-job-motion-summary');if(!bar)return;
-    let readout=$('#pendant-motion-speed');if(!readout){readout=el('div',undefined);readout.id='pendant-motion-speed';readout.style.cssText='text-align:center;font-size:14px;color:#ccc;margin:3px 0 6px';readout.title='Live: Klipper planned tool speed, not encoder-measured. Programmed: last parsed G-code feed; Adjusted includes Run speed override; buffered commands may be ahead of current motion.';bar.append(readout);}
-    const ready=s?.webhooks?.state==='ready',live=s?.motion_report?.live_velocity,feed=s?.gcode_move?.speed,factor=s?.gcode_move?.speed_factor;
-    const target=Number.isFinite(feed)&&Number.isFinite(factor)?feed*factor/60:null;
-    const text='Programmed '+(ready&&Number.isFinite(feed)?(feed/60).toFixed(1):'—')+' mm/s · Override '+(ready&&Number.isFinite(factor)?Math.round(factor*100):'—')+'% · Adjusted '+(ready&&target!==null?target.toFixed(1):'—')+' mm/s · Live '+(ready&&Number.isFinite(live)?live.toFixed(1):'—')+' mm/s';if(readout.textContent!==text)readout.textContent=text;
-    let limits=$('#pendant-motion-limits');if(!limits){limits=el('div');limits.id='pendant-motion-limits';limits.title='Current Klipper session limits; axis limits and acceleration can reduce actual motion speed.';bar.append(limits);}
-    const limit=(key,digits=0)=>ready&&Number.isFinite(s?.toolhead?.[key])?s.toolhead[key].toFixed(digits):'—';
-    const limitText='Limits · Speed '+limit('max_velocity',1)+' mm/s · Accel '+limit('max_accel')+' mm/s² · Corner '+limit('square_corner_velocity',1)+' mm/s · Cruise '+(ready&&Number.isFinite(s?.toolhead?.minimum_cruise_ratio)?Math.round(s.toolhead.minimum_cruise_ratio*100)+'%':'—');
-    if(limits.textContent!==limitText)limits.textContent=limitText;
-
+    const bar=$('#pendant-job-motion-summary');if(bar&&window.CncRunUI)window.CncRunUI.updateSpeeds(event.detail,bar);
   });
   document.addEventListener('cnc-pendant-status',event=>{
-    const s=event.detail;latest=s;const ready=s?.webhooks?.state==='ready',active=!!s?.pause_resume?.is_paused||['paused','printing'].includes(s?.print_stats?.state);$('#pendant-live-state').textContent=!ready?'Disconnected / controller not ready':(s.pause_resume?.is_paused||s.print_stats?.state==='paused'?'Paused':s.print_stats?.state==='printing'?'Running':['x','y','z'].every(axis=>s.toolhead?.homed_axes?.includes(axis))?'Ready':'Not homed')+(active&&s.print_stats?.filename?' · '+s.print_stats.filename:'');
+    const s=event.detail;latest=s;const ready=s?.webhooks?.state==='ready',active=!!s?.pause_resume?.is_paused||['paused','printing'].includes(s?.print_stats?.state);$('#pendant-live-state').textContent=!ready?'Disconnected / controller not ready':(s.pause_resume?.is_paused||s.print_stats?.state==='paused'?'Paused':s.print_stats?.state==='printing'?'Running':['x','y','z'].every(axis=>s.toolhead?.homed_axes?.includes(axis))?'Ready':'Not homed');
     if(ready&&stoppedWasNotReady){stoppedShown=false;stoppedWasNotReady=false;document.querySelector('dialog[aria-label="Controller stopped"]')?.close();}else if(s?.webhooks?.state==='shutdown'){stoppedWasNotReady=true;stoppedDialog(s.webhooks.state_message);}
     const stopped=!ready&&stoppedWasNotReady,banner=$('#pendant-live-state');banner.classList.toggle('cnc-unhomed',ready&&!active&&!['x','y','z'].every(axis=>s.toolhead?.homed_axes?.includes(axis)));banner.setAttribute('role',stopped?'button':'status');banner.tabIndex=stopped?0:-1;if(stopped)banner.textContent='Controller stopped — tap for restart';
     renderCoordinates(s);renderJobView(s);updateStepperButton(s);updateHomingNeeded(s);queueFit();
@@ -126,13 +117,13 @@
     const text=(id,value)=>{const node=$(id);if(node&&node.textContent!==value)node.textContent=value;};
     text('#pendant-job-title',state.mode==='paused'?'JOB PAUSED — jogging available':'JOB RUNNING');
     text('#pendant-job-file',s?.print_stats?.filename||'No file selected');
-    const pct=Math.round(state.progress*100);text('#pendant-job-percent',pct+'%');$('#pendant-job-progress').value=state.progress;
+    const pct=Math.min(99,Math.floor(state.progress*100));text('#pendant-job-percent',pct+'%');$('#pendant-job-progress').value=state.progress;
     const duration=n=>{const minutes=Math.floor(n/60);return `${Math.floor(minutes/60)}h ${minutes%60}m`;};
-    text('#pendant-job-elapsed','Cutting time: '+duration(state.seconds));
+    text('#pendant-job-elapsed','Elapsed: '+duration(Number(s?.print_stats?.total_duration)||state.seconds));
     text('#pendant-job-remaining',state.progress>.02&&state.seconds>0?'Est. remaining: '+duration(state.seconds*(1-state.progress)/state.progress):'Remaining time: estimating…');
     const original=$('#lowrider-pause-resume'),pause=$('#pendant-running-pause');pause.disabled=state.mode!=='running'||!!original?.disabled;
     const abort=$('[data-lowrider-job-action="abort"]');$('#pendant-abort-job').disabled=!['running','paused'].includes(state.mode)||!abort||abort.disabled;
-    text('#pendant-paused-note','Paused — jog to inspect or change tools, then Resume.');
+    text('#pendant-paused-note','JOB PAUSED — inspect or change the tool; set tool Z if changed. Dry run: spindle OFF.');
   }
   function arrangePendant(){
     if($('#pendant-jog-zone'))return;

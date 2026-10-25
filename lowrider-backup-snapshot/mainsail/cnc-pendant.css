@@ -293,3 +293,26 @@ html[data-workspace=true] dialog[data-docked] .console-output{height:clamp(120px
 .cnc-batch-prepare .dialog-field input{width:140px}.cnc-batch-prepare details>button{margin:4px}
 
 .cnc-batch-stages{max-height:34dvh}.cnc-batch-stage{padding:4px 0}.cnc-batch-stage>button{min-height:28px}.cnc-batch-prepare .cnc-project-check{font-size:13px}
+
+/* Run information stays stable while digits change. */
+#pendant-running-job{position:relative}#pendant-job-title{padding-right:65px}#pendant-job-health{position:absolute!important;right:8px;top:8px;width:52px;min-height:32px;font-size:12px}
+#pendant-job-motion-summary{display:grid!important;grid-template-columns:75px minmax(0,1fr)!important;gap:10px!important;align-items:center}
+#pendant-speed-cells{grid-column:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px;min-width:0;font-variant-numeric:tabular-nums}
+#pendant-speed-cells>div{min-width:0;text-align:center}#pendant-speed-cells small{display:block;color:#bbb;font-size:12px}#pendant-speed-cells strong{display:block;font-size:14px;white-space:nowrap;min-width:0}
+#pendant-job-percent{font-size:30px!important;grid-column:1;min-width:0}#pendant-job-file{font-size:14px!important;font-weight:bold;margin-right:0}
+#pendant-run-context{font-size:14px;line-height:1.45;overflow-wrap:anywhere}#pendant-context-operation{font-weight:bold}#pendant-context-next,#pendant-context-eta{color:#d2e8b7}
+#pendant-running-details{font-size:12px;color:#bbb}#pendant-motion-limits{white-space:pre-wrap;text-align:left;font-size:12px}
+#pendant-paused-note{white-space:pre-line;font-size:13px!important;animation:cnc-pause-attention 2s ease-in-out infinite}
+@keyframes cnc-pause-attention{50%{border-color:#ffdb68;box-shadow:inset 0 0 0 1px #ffdb68}}
+#pendant-running-buffer,#pendant-jog-buffer{font-size:12px;display:grid;gap:2px;color:#bdd4e7;font-variant-numeric:tabular-nums}#pendant-running-buffer progress,#pendant-jog-buffer progress{width:100%;height:8px}#pendant-jog-buffer{grid-column:6/span 2;grid-row:3/span 2;align-self:center;padding:3px}#pendant-jog-buffer small,#pendant-running-buffer small{font-size:10px}
+.cnc-tool-review{position:fixed!important;top:8px!important;bottom:auto!important;margin:0 auto!important;max-height:calc(100dvh - 16px);scrollbar-gutter:stable}.cnc-tool-review .dialog-actions button{flex:1 1 130px}.cnc-tool-review .dialog-actions button[disabled]{font-weight:inherit!important}
+.cnc-batch-memo{font-size:17px!important;font-weight:bold;color:#ffe29a}.cnc-batch-stage:has(>button[hidden]){grid-template-columns:1fr}
+.cnc-run-override{background:#303030;padding:8px;border-radius:5px}.cnc-run-override.cnc-fast{border:1px solid #f2c154;animation:cnc-pause-attention 2s infinite}.cnc-run-override input{width:100px}
+#app[data-job-mode=complete] #pendant-running-job{display:flex;flex-direction:column;gap:8px;background:#193b2b;border:1px solid #7dc797;border-radius:7px;padding:14px}
+#app[data-job-mode=complete] #pendant-jog-zone,#app[data-job-mode=complete] #pendant-stage-card{display:none!important}
+@media(prefers-reduced-motion:reduce){#pendant-paused-note,.cnc-run-override.cnc-fast{animation:none}}
+
+#app[data-job-mode=complete] #pendant-run-context,#app[data-job-mode=complete] #pendant-speed-cells,#app[data-job-mode=complete] #pendant-running-buffer,#app[data-job-mode=complete] #pendant-running-details{display:none!important}
+#pendant-context-next,#pendant-context-eta{font-variant-numeric:tabular-nums}
+
+.cnc-batch-prepare [hidden]{display:none!important}
