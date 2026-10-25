@@ -245,3 +245,31 @@ html[data-workspace=true] [data-docked=files] .dialog-actions button{flex-basis:
 .cnc-tool-specs>div:first-child{display:block;background:#503b20;padding:6px}
 .cnc-tool-specs>div:first-child span{display:block;text-align:left;margin-top:4px}
 .cnc-tool-review>label{display:block;line-height:1.4;margin:10px 0}
+
+/* Desktop organization shares the same compact Pendant controls as the phone. */
+@media(min-width:800px) and (pointer:fine){
+ html:not([data-workspace=true]) .pendant-header{max-width:560px;margin:0 auto}
+ html:not([data-workspace=true]) .pendant-header>a{position:absolute;left:50%}
+}
+.cnc-mainsail-nav{display:none}
+@media(min-width:1200px) and (pointer:fine){
+ .cnc-mainsail-nav{display:flex;position:fixed;left:12px;top:20px;width:165px;gap:8px;flex-direction:column}
+ .cnc-mainsail-nav a{padding:10px;border:1px solid #555;border-radius:5px;text-decoration:none;background:#222}
+ dialog.cnc-side-dialog{position:fixed;left:auto;right:12px;top:12px;bottom:auto;margin:0;width:calc((100vw - 560px)/2 - 26px);max-width:520px;max-height:calc(100dvh - 24px)}
+ dialog.cnc-side-dialog::backdrop{background:transparent}
+}
+html[data-workspace=true] .pendant-tabs{display:grid!important;position:relative;inset:auto;width:100%;max-width:100%;height:42px;margin:4px 0 0;padding:2px;grid-template-columns:repeat(6,minmax(0,1fr))}
+html[data-workspace=true] .pendant-tabs button{min-height:36px;font-size:11px}
+html[data-workspace=true] .cnc-workspace-controls>#app{flex:0 1 auto;height:calc(100% - 170px)}
+html[data-workspace=true] [data-workspace-slot=files]{flex:1 1 auto;max-height:none}
+.cnc-panel-selected{outline:2px solid #8bceff;outline-offset:-2px;border-radius:6px}
+.cnc-tab-selected{background:#244860!important;border-color:#8bceff!important;color:#fff!important}
+
+html[data-workspace=true] dialog[data-docked] .console-output{height:clamp(120px,20vh,240px)}
+
+@media(min-width:800px) and (pointer:fine){
+ html:not([data-workspace=true]){--row:clamp(22px,3.6dvh,32px)}
+ html:not([data-workspace=true]) .pendant-header{height:44px}
+ html:not([data-workspace=true]) .pendant-header>a{top:22px}
+ html:not([data-workspace=true]) .pendant-header #pendant-estop{width:84px;min-height:34px;font-size:13px}
+}

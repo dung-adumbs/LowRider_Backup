@@ -20,6 +20,13 @@
   async function checkStopped(){if(stopCheckPending||latest?.webhooks?.state==='ready')return;stopCheckPending=true;try{const info=await api('/printer/info');if(info.state==='shutdown'){stoppedWasNotReady=true;stoppedDialog(info.state_message);}}catch(_){}finally{stopCheckPending=false;}}
   setInterval(checkStopped,2500);
   function stopButton(){const b=el('button','E-STOP','pendant-stop');b.type='button';b.setAttribute('aria-label','Emergency stop');b.addEventListener('click',emergencyStop);return b;}
+  function selectPanel(name){
+    const slot=document.querySelector('[data-workspace-slot='+name+']');if(!slot)return false;
+    document.querySelectorAll('[data-workspace-slot]').forEach(e=>e.classList.toggle('cnc-panel-selected',e===slot));
+    document.querySelectorAll('.pendant-tabs button').forEach(b=>{const active=(b.dataset.pendantDialog||(b.id==='pendant-steppers'?'steppers':''))===name;b.classList.toggle('cnc-tab-selected',active);b.setAttribute('aria-pressed',String(active));});
+    const disclosure=slot.querySelector('.cnc-macros-disclosure');if(disclosure)disclosure.open=true;
+    slot.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});return true;
+  }
   function modal(title){
     const dialog=el('dialog');dialog.setAttribute('aria-label',title);dialog.append(el('h3',title));const feedback=el('p','','dialog-feedback');feedback.setAttribute('role','status');dialog.append(feedback);const actions=el('div',undefined,'dialog-actions');dialog.append(actions);
     let pending=0;const dismissible=/^(Machine health|Temperature warning|Preserved legacy files|Organize project|Projects & files|Review saved project|Review posted group|Stage details|Toolpath viewer|Files \/ stage job|Prepare stage|Console \/ commands|Advanced macros|Steppers|Light)/.test(title);dialog.addEventListener('click',event=>{const b=dialog.getBoundingClientRect();if(event.target===dialog&&(event.clientX<b.left||event.clientX>b.right||event.clientY<b.top||event.clientY>b.bottom)&&dismissible&&!pending&&!dialog.hasAttribute('aria-busy'))dialog.close();});dialog.addEventListener('cancel',event=>{if(!dismissible||pending||dialog.hasAttribute('aria-busy'))event.preventDefault();});
@@ -27,9 +34,9 @@
     const close=add('Close',()=>dialog.close());dialog.addEventListener('close',()=>dialog.remove());
     const dock=workspace&&({'Projects & files':'files','Files / stage job':'files','Review saved project':'files','Review posted group':'files','Machine limits (current session)':'machine','Keep-out areas':'keepouts','Steppers / idle timer':'steppers','Advanced macros':'macros','Console / commands':'console'}[title]);
     const slot=dock&&document.querySelector('[data-workspace-slot='+dock+']');
-    if(slot){slot.querySelector('dialog')?.close();dialog.dataset.docked=dock;close.hidden=true;if(dock==='files'&&title!=='Projects & files')add('Projects & files',()=>window.CncProjects.overview());slot.append(dialog);if(dock==='macros'){const details=el('details'),summary=el('summary','Macros');details.className='cnc-macros-disclosure';dialog.querySelector('h3').hidden=true;details.append(summary);for(const node of [...dialog.children])if(node.tagName!=='H3')details.append(node);dialog.append(details);dialog.dataset.collapsed='true';}dialog.querySelector('h3').textContent=({files:'Files & projects',machine:'Machine',keepouts:'Keep-out areas',steppers:'Steppers',macros:'Macros',console:'Console'})[dock];dialog.setAttribute('open','');}else{document.body.append(dialog);dialog.showModal();}return{dialog,feedback,add,insert(e){feedback.parentElement.insertBefore(e,feedback);}};
+    if(slot){slot.querySelector('dialog')?.close();dialog.dataset.docked=dock;close.hidden=true;if(dock==='files'&&title!=='Projects & files')add('Projects & files',()=>window.CncProjects.overview());slot.append(dialog);if(dock==='macros'){const details=el('details'),summary=el('summary','Macros');details.className='cnc-macros-disclosure';dialog.querySelector('h3').hidden=true;details.append(summary);for(const node of [...dialog.children])if(node.tagName!=='H3')details.append(node);dialog.append(details);dialog.dataset.collapsed='true';}dialog.querySelector('h3').textContent=({files:'Files & projects',machine:'Machine',keepouts:'Keep-out areas',steppers:'Steppers',macros:'Macros',console:'Console'})[dock];dialog.setAttribute('open','');}else{document.body.append(dialog);if(dismissible&&!embedded&&matchMedia('(min-width:1200px) and (pointer:fine)').matches)dialog.classList.add('cnc-side-dialog');dialog.showModal();}return{dialog,feedback,add,insert(e){feedback.parentElement.insertBefore(e,feedback);}};
   }
-  function fit(){if(workspace){const app=$('#app'),head=$('.pendant-header'),view=$('#pendant-viewport');if(app&&head&&view){const natural=head.offsetHeight+view.offsetHeight,scale=Math.min(1,app.clientHeight/Math.max(1,natural));app.style.transform=scale<.999?'scale('+scale+')':'';app.dataset.scale=scale.toFixed(3);}return;}const frame=$('#pendant-viewport'),content=$('#pendant-scale'),panel=$('.toolhead-control-panel');if(!frame||!panel)return;const mobile=matchMedia('(max-width:799px), (pointer:coarse)').matches;const scale=mobile?1:Math.min(1,frame.clientHeight/Math.max(1,panel.offsetHeight+8));const transform=scale<.999?`scale(${scale})`:'';if(content.style.transform!==transform)content.style.transform=transform;content.dataset.scale=scale.toFixed(3);}
+  function fit(){if(workspace){const app=$('#app'),head=$('.pendant-header'),view=$('#pendant-viewport');if(app&&head&&view){const natural=head.offsetHeight+view.offsetHeight+($('.pendant-tabs')?.offsetHeight||0)+8,scale=Math.min(1,app.clientHeight/Math.max(1,natural));app.style.transform=scale<.999?'scale('+scale+')':'';app.dataset.scale=scale.toFixed(3);}return;}const frame=$('#pendant-viewport'),content=$('#pendant-scale'),panel=$('.toolhead-control-panel');if(!frame||!panel)return;const mobile=matchMedia('(max-width:799px), (pointer:coarse)').matches;const scale=mobile?1:Math.min(1,frame.clientHeight/Math.max(1,panel.offsetHeight+8));const transform=scale<.999?`scale(${scale})`:'';if(content.style.transform!==transform)content.style.transform=transform;content.dataset.scale=scale.toFixed(3);}
   function queueFit(){if(fitQueued)return;fitQueued=true;requestAnimationFrame(()=>{fitQueued=false;fit();});}
   document.addEventListener('cnc-keepouts',event=>{const button=$('[data-pendant-dialog=keepouts]');if(button){const n=event.detail.count;button.textContent='Keep-outs'+(n?' ('+n+')':'');button.classList.toggle('cnc-keepout-enabled',n>0);}});
   window.PendantUI={modal,el,api,queueFit};
@@ -158,7 +165,7 @@
     const actions=el('div');actions.id='pendant-actions';safety.after(actions);actions.append(home,$('#lowrider-grid-zero'),$('#lowrider-pause-resume'),$('#lowrider-grid-light').parentElement);active.hidden=true;
     const auxiliary=$('#pendant-auxiliary');auxiliary.append($('.macrogroup_lowrider-homing_panel'),timeout);
     const disable=$('[data-lowrider-disable-steppers]');disable.textContent='Disable Steppers';disable.setAttribute('aria-label','Disable Steppers');auxiliary.append(disable);
-    const steppers=el('button');steppers.id='pendant-steppers';steppers.setAttribute('aria-label','Steppers timer and controls');steppers.addEventListener('click',showSteppers);$('.pendant-tabs').insertBefore(steppers,$('[data-pendant-dialog=console]'));
+    const steppers=el('button');steppers.id='pendant-steppers';steppers.setAttribute('aria-label','Steppers timer and controls');steppers.addEventListener('click',()=>{if(!workspace||!selectPanel('steppers'))showSteppers();});$('.pendant-tabs').insertBefore(steppers,$('[data-pendant-dialog=console]'));
     const unhomed=el('div');unhomed.id='pendant-homing-needed';unhomed.hidden=true;unhomed.setAttribute('role','status');pad.append(unhomed);
     actions.after($('#lowrider-feed-factor'));
     const body=$('.panel-body'),toolbar=body.querySelector('.panel-toolbar'),positions=body.querySelector('.positions'),feed=$('#lowrider-feed-factor');
@@ -208,7 +215,7 @@
       form.addEventListener('submit',async event=>{event.preventDefault();const script=input.value.trim();if(!script||send.disabled)return;send.disabled=true;try{await command(script);input.value='';}catch(error){m.feedback.textContent=error.message;}finally{send.disabled=false;}});m.dialog.addEventListener('close',()=>{clearTimeout(timer);if(diagnostic)$('#pendant-auxiliary').append(diagnostic);});update();
     }
   };
-  document.querySelectorAll('[data-pendant-dialog]').forEach(b=>b.addEventListener('click',()=>sections[b.dataset.pendantDialog]()));
+  document.querySelectorAll('[data-pendant-dialog]').forEach(b=>b.addEventListener('click',()=>{if(!workspace||!selectPanel(b.dataset.pendantDialog))sections[b.dataset.pendantDialog]();}));
   const topStop=$('#pendant-estop');if(topStop)topStop.addEventListener('click',emergencyStop);
   const fullscreen=$('#pendant-fullscreen');
   if(fullscreen){
@@ -223,9 +230,13 @@
     });
     document.addEventListener('fullscreenchange',fullscreenLabel);fullscreenLabel();
   }
+  if(!embedded){
+    const nav=el('nav');nav.className='cnc-mainsail-nav';nav.setAttribute('aria-label','Mainsail pages');
+    for(const [label,path] of [['Mainsail Dashboard','/?standard=1'],['Console','/console'],['G-code files','/files'],['G-code viewer','/viewer'],['History','/history'],['Machine','/machine']]){const link=el('a',label);link.href=path;nav.append(link);}document.body.append(nav);
+  }
   if(workspace){
-    const layout=el('div');layout.id='cnc-workspace';const left=el('aside'),right=el('aside'),center=el('section');left.setAttribute('aria-label','Machine and keep-out panels');right.setAttribute('aria-label','Console and macros panels');center.className='cnc-workspace-controls';
-    for(const [side,names] of [[left,['machine','keepouts']],[right,['console','steppers','macros']]])for(const name of names){const slot=el('section');slot.dataset.workspaceSlot=name;side.append(slot);}
+    const layout=el('div');layout.id='cnc-workspace';const left=el('aside'),right=el('aside'),center=el('section');left.setAttribute('aria-label','Console, macros and keep-out panels');right.setAttribute('aria-label','Machine and stepper panels');center.className='cnc-workspace-controls';
+    for(const [side,names] of [[left,['console','macros','keepouts']],[right,['machine','steppers']]])for(const name of names){const slot=el('section');slot.dataset.workspaceSlot=name;side.append(slot);}
     document.body.append(layout);center.append($('#app'));const filesSlot=el('section');filesSlot.dataset.workspaceSlot='files';center.append(filesSlot);layout.append(left,center,right);
     let attempts=0;const initialize=()=>{if(!$('#pendant-steppers')||!$('#lowrider-keepout-panel')||!window.CncProjects){if(++attempts<80)setTimeout(initialize,150);return;}sections.files();sections.machine();sections.keepouts();showSteppers();sections.console();sections.macros();window.parent.postMessage({type:'cnc-pendant-ready'},location.origin);};setTimeout(initialize,0);
   }
