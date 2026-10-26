@@ -168,8 +168,8 @@
   function confirmClearance(axis,move,status) {
     return new Promise(resolve=>{
       const z=axis==='Z'?move.target:status.gcode_move.gcode_position[2];
-      const modal=cncDialog(`Move tool to work ${axis} ${move.target.toFixed(2)} mm?`);
-      const detail=document.createElement('p');detail.textContent=`Work Z will be ${z.toFixed(2)} mm, below the Z${safeJogZ} clearance. Check the tool and workpiece before moving. Jog speed is capped at ${effectiveJogPercent(axis,move.target,status)}%.`;modal.dialog.append(detail);
+      const modal=cncDialog(`Move tool to work ${axis} ${coordinateText(move.target,2)} ${document.documentElement.dataset.coordinateUnit||'mm'}?`);
+      const detail=document.createElement('p');detail.textContent=`Work Z will be ${coordinateText(z,2)} ${document.documentElement.dataset.coordinateUnit||'mm'}, below the Z${coordinateText(safeJogZ,2)} clearance. Check the tool and workpiece before moving. Jog speed is capped at ${effectiveJogPercent(axis,move.target,status)}%.`;modal.dialog.append(detail);
       let approved=false;modal.dialog.addEventListener('close',()=>resolve(approved),{once:true});
       modal.add('Move',()=>{approved=true;modal.dialog.close();},'#b71c1c');modal.add('Cancel',()=>modal.dialog.close());modal.open();
     });
@@ -209,7 +209,7 @@
         if(Math.abs(d)<1e-9){if(start[j]<low[j]||start[j]>high[j]){enter=2;break;}}
         else{const a=(low[j]-start[j])/d,c=(high[j]-start[j])/d;enter=Math.max(enter,Math.min(a,c));exit=Math.min(exit,Math.max(a,c));}
       }
-      if(enter<=exit)return `Keep-out: ${b.name||'protected area'}. Raise above machine Z ${b.safeZ.toFixed(2)} mm before crossing.`;
+      if(enter<=exit)return `Keep-out: ${b.name||'protected area'}. Raise above machine Z ${globalThis.window?.CncSettings?.length?.().format(b.safeZ)||b.safeZ.toFixed(2)} ${globalThis.window?.CncSettings?.get('units')||'mm'} before crossing.`;
     }
     return '';
   }
@@ -221,7 +221,7 @@
     if(!toolhead||document.getElementById('lowrider-keepout-panel'))return;
     const panel=document.createElement('section');panel.id='lowrider-keepout-panel';panel.className='v-card v-sheet theme--dark';panel.style.cssText='padding:14px;margin:12px 0;background:#252525;color:white';
     const heading=document.createElement('h3');heading.textContent='Keep-out areas';heading.style.cssText='font-size:15px;margin:0 0 8px';panel.append(heading);
-    const note=document.createElement('p');note.textContent='Machine coordinates in mm, fixed to the table. Enabled blocks guard pendant moves and are checked conservatively during job verification. Console commands and homing bypass these checks. Clearance expands X/Y for the cutter and clamps. Changes do not protect moves already queued.';note.style.cssText='font-size:12px;line-height:1.4';panel.append(note);
+    const note=document.createElement('p');note.textContent='Machine coordinates in the selected units, fixed to the table. Enabled blocks guard pendant moves and are checked conservatively during job verification. Console commands and homing bypass these checks. Clearance expands X/Y for the cutter and clamps. Changes do not protect moves already queued.';note.style.cssText='font-size:12px;line-height:1.4';panel.append(note);
     const rows=document.createElement('div');panel.append(rows);
     const feedback=document.createElement('div');feedback.style.cssText='font-size:12px;padding-top:6px';panel.append(feedback);
     async function render(){
@@ -238,20 +238,20 @@
             const apply=async()=>{toggle.disabled=true;try{await loadKeepout();const next=keepoutBlocks.slice();if(!next[index])throw Error('Set block boundaries first');next[index]={...next[index],enabled:!current.enabled};await saveKeepouts(next);await render();}catch(e){feedback.textContent=e.message;}finally{toggle.disabled=false;}};
             if(current.enabled){const modal=cncDialog('Turn off keep-out protection?');const text=document.createElement('p');text.textContent=`Are you sure? Jogging will be allowed through ${current.name}.`;modal.dialog.append(text);modal.add('Yes, turn off',()=>{modal.dialog.close();apply();},'#b71c1c');modal.add('Cancel',()=>modal.dialog.close());modal.open();}else await apply();
           }catch(e){feedback.textContent=e.message;}
-        });row.append(edit,toggle);rows.append(row);const summary=document.createElement('div');summary.style.cssText='font-size:11px;color:#ccc;padding:4px 0 8px';summary.textContent=Number.isFinite(block.xmin)?`X ${block.xmin} to ${block.xmax}; Y ${block.ymin} to ${block.ymax}; Safe Z: ${Number.isFinite(block.safeZ)?block.safeZ+' mm':'set before enabling'}`:'Set boundaries to use this block';rows.append(summary);
+        });row.append(edit,toggle);rows.append(row);const summary=document.createElement('div');summary.style.cssText='font-size:11px;color:#ccc;padding:4px 0 8px';summary.textContent=Number.isFinite(block.xmin)?`X ${coordinateText(block.xmin,0)} to ${coordinateText(block.xmax,0)}; Y ${coordinateText(block.ymin,1)} to ${coordinateText(block.ymax,1)}; Safe Z: ${Number.isFinite(block.safeZ)?coordinateText(block.safeZ,2)+' '+(document.documentElement.dataset.coordinateUnit||'mm'):'set before enabling'}`:'Set boundaries to use this block';rows.append(summary);
       }
     }
     async function editBlock(index){
       try{await loadKeepout();}catch(e){feedback.textContent=e.message;return;}
-      const b=keepoutBlocks[index]||{name:`Block ${index+1}`,enabled:false,margin:5};const modal=cncDialog('Keep-out block');const inputs={};
+      const units=window.CncSettings.length(),b=keepoutBlocks[index]||{name:`Block ${index+1}`,enabled:false,margin:5};const modal=cncDialog('Keep-out block');const inputs={};
       const name=document.createElement('input');name.value=b.name||`Block ${index+1}`;name.setAttribute('aria-label','Block name');name.style.cssText='width:100%;background:#202020;color:white;border:1px solid #777;padding:8px';modal.dialog.append(name);
       const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px';
       for(const [key,label] of [['xmin','X min'],['xmax','X max'],['safeZ','Safe Z height'],['margin','XY clearance'],['ymin','Y min'],['ymax','Y max']]){
-        const wrap=document.createElement('label');wrap.textContent=label;wrap.style.cssText='font-size:12px;min-width:0';const slots={xmin:[1,2],xmax:[3,2],safeZ:[2,2],margin:[2,4],ymin:[2,3],ymax:[2,1]};wrap.style.gridColumn=slots[key][0];wrap.style.gridRow=slots[key][1];const input=document.createElement('input');input.type='number';input.step='any';input.value=Number.isFinite(b[key])?b[key]:'';input.style.cssText='display:block;width:100%;min-height:40px;box-sizing:border-box;background:#202020;color:white;border:1px solid #777;padding:6px';inputs[key]=input;wrap.append(input);grid.append(wrap);
+        const wrap=document.createElement('label');wrap.textContent=label+' ('+units.unit+')';wrap.style.cssText='font-size:12px;min-width:0';const slots={xmin:[1,2],xmax:[3,2],safeZ:[2,2],margin:[2,4],ymin:[2,3],ymax:[2,1]};wrap.style.gridColumn=slots[key][0];wrap.style.gridRow=slots[key][1];const input=document.createElement('input');input.type='number';input.step='any';input.value=Number.isFinite(b[key])?units.format(b[key]):'';input.style.cssText='display:block;width:100%;min-height:40px;box-sizing:border-box;background:#202020;color:white;border:1px solid #777;padding:6px';input.dataset.initial=input.value;inputs[key]=input;wrap.append(input);grid.append(wrap);
       }modal.dialog.append(grid);
-      const detail=document.createElement('p');detail.textContent='Machine coordinates, mm. Crossing requires Z above Safe Z. Clearance should cover cutter radius plus extra space. Homing and files bypass this protection.';detail.style.fontSize='12px';modal.dialog.append(detail);
+      const detail=document.createElement('p');detail.textContent='Machine coordinates, '+units.unit+'. Crossing requires Z above Safe Z. Clearance should cover cutter radius plus extra space. Homing and files bypass this protection.';detail.style.fontSize='12px';modal.dialog.append(detail);
       const error=document.createElement('div');error.style.color='#ffaaaa';modal.dialog.append(error);
-      const apply=async(enabled)=>{const nextBlock={name:name.value.trim()||`Block ${index+1}`,enabled};for(const [key,input] of Object.entries(inputs)){if(!input.value.trim()){error.textContent='Fill in every boundary, safe height and clearance.';return;}nextBlock[key]=Number(input.value);}
+      const apply=async(enabled)=>{if(window.CncSettings.get('units')!==units.unit){error.textContent='Units changed. Reopen this block.';return;}const nextBlock={name:name.value.trim()||`Block ${index+1}`,enabled};for(const [key,input] of Object.entries(inputs)){if(!input.value.trim()){error.textContent='Fill in every boundary, safe height and clearance.';return;}nextBlock[key]=input.value===input.dataset.initial&&Number.isFinite(b[key])?b[key]:units.toMm(Number(input.value));}
         if(!validKeepout(nextBlock)){error.textContent='Use finite numbers, minimums below maximums, and non-negative clearance.';return;}
         if(b.enabled&&!enabled){error.textContent='To turn protection off, use its ON/OFF toggle and confirmation.';return;}
         try{await loadKeepout();const next=keepoutBlocks.slice();while(next.length<=index)next.push({name:`Block ${next.length+1}`,enabled:false});next[index]=nextBlock;await saveKeepouts(next);modal.dialog.close();await render();}catch(e){error.textContent=e.message;}
@@ -259,7 +259,7 @@
       modal.add(b.enabled?'Save protected block':'Save and enable',()=>apply(true),'#b71c1c');if(!b.enabled)modal.add('Save with protection off',()=>apply(false));modal.add('Cancel',()=>modal.dialog.close());modal.open();
     }
     const center=document.querySelector('.macros-panel')?.parentElement; (center||toolhead.parentElement).append(panel);
-    render().catch(e=>{feedback.textContent=e.message;});
+    document.addEventListener('cnc-shared-setting',event=>{if(event.detail.key==='units')render().catch(e=>{feedback.textContent=e.message;});});render().catch(e=>{feedback.textContent=e.message;});
   }
 
   function jogMove(axis, step, speed, scale) {
@@ -320,7 +320,7 @@
     const guard = document.getElementById('lowrider-z5-allow');
     if (guard) {
       guard.textContent = allowBelowZ5 ? 'Below safe Z\nAllowed' : 'Below safe Z\nLocked';
-      guard.title = `Unlock dashboard jogging below work Z${safeJogZ} mm. Relocks above that height, on homing, or when work zeros change. Upward escape remains available.`;
+      guard.title = `Unlock dashboard jogging below work Z${coordinateText(safeJogZ,2)} ${document.documentElement.dataset.coordinateUnit||'mm'}. Relocks above that height, on homing, or when work zeros change. Upward escape remains available.`;
       guard.style.backgroundColor = allowBelowZ5 ? '#b71c1c' : '#2e7d32';
       guard.setAttribute('aria-pressed',String(allowBelowZ5));
     }
@@ -713,7 +713,7 @@
     return status;
   }
   function cncDialog(titleText) {
-    const dialog=document.createElement('dialog');dialog.style.cssText='position:fixed;inset:0;margin:auto;width:380px;max-width:92vw;max-height:88dvh;overflow-y:auto;box-sizing:border-box;overscroll-behavior:contain;touch-action:pan-y;background:#252525;color:white;border:1px solid #777;border-radius:8px;padding:20px;font-family:Arial,sans-serif';
+    const dialog=document.createElement('dialog');dialog.setAttribute('aria-label',titleText);dialog.style.cssText='position:fixed;inset:0;margin:auto;width:380px;max-width:92vw;max-height:88dvh;overflow-y:auto;box-sizing:border-box;overscroll-behavior:contain;touch-action:pan-y;background:#252525;color:white;border:1px solid #777;border-radius:8px;padding:20px;font-family:Arial,sans-serif';
     const title=document.createElement('h3');title.textContent=titleText;dialog.append(title);
     dialog.addEventListener('close',()=>dialog.remove());
     if(/^(Work light|Keep-out block|Stepper idle|Run speed|Jog speed)/i.test(titleText))dialog.addEventListener('click',e=>{const b=dialog.getBoundingClientRect();if(e.target===dialog&&(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom)&&!dialog.hasAttribute('aria-busy'))dialog.close();});
@@ -769,7 +769,7 @@
       const create=(id,text)=>{const b=document.createElement('button');b.id=id;b.type='button';b.textContent=text;b.className='lowrider-active-button';b.style.cssText='min-height:28px;color:white;background:#202020;border:1px solid #777;border-radius:4px;font-size:12px';box.append(b);return b;};
       const zero=create('lowrider-grid-zero','Zero…');zero.style.backgroundColor='#1976d2';
       zero.addEventListener('click',()=>{
-        const modal=cncDialog('Set this position as work zero?');const explanation=document.createElement('p');explanation.textContent=`Current work position: ${['X','Y','Z'].map((a,i)=>a+' '+(controlStatus?.gcode_move?.gcode_position[i]??0).toFixed(2)).join(' / ')} mm. Choose which coordinates to set to zero; this does not move the tool.`;explanation.style.cssText='font-size:13px;line-height:1.4;margin-top:10px';modal.dialog.append(explanation);
+        const modal=cncDialog('Set this position as work zero?');const explanation=document.createElement('p');explanation.textContent=`Current work position: ${['X','Y','Z'].map((a,i)=>a+' '+coordinateText(controlStatus?.gcode_move?.gcode_position[i]??0,i)).join(' / ')} ${document.documentElement.dataset.coordinateUnit||'mm'}. Choose which coordinates to set to zero; this does not move the tool.`;explanation.style.cssText='font-size:13px;line-height:1.4;margin-top:10px';modal.dialog.append(explanation);
         for(const [label,script,axes] of [['Set Tool Z Zero','ZERO_Z','z'],['Zero All','ZERO_ALL','xyz'],['Zero XY','ZERO_XY','xy'],['Zero X','ZERO_X','x'],['Zero Y','ZERO_Y','y']]){
           const choice=modal.add(label,async()=>{modal.dialog.close();try{await runCncCommand(script,true);allowBelowZ5=false;refreshJogChoices();}catch(error){homingNotice(error.message);}},script==='ZERO_Z'?'#1976d2':'#202020');
           if(script==='ZERO_Z'){choice.style.minHeight='56px';choice.style.fontSize='16px';choice.style.fontWeight='bold';}choice.disabled=[...axes].some(axis=>!controlStatus?.toolhead.homed_axes.includes(axis))||(isMachinePaused(controlStatus)&&script!=='ZERO_Z');if(isMachinePaused(controlStatus)&&script!=='ZERO_Z')choice.title='Keep the job XY origin unchanged while paused';

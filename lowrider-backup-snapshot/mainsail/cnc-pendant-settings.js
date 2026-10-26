@@ -12,14 +12,15 @@
     for(const [key,defaultValue] of Object.entries(defaults)){const value=remote[key];if(value===undefined&&!ready){await set(key,defaultValue);continue;}if(!valid(key,value)||pending.has(key))continue;if(editing){deferred[key]=value;continue;}delete deferred[key];if(values[key]!==value){values[key]=value;emit(key,value);}}
     ready=true;document.documentElement.dataset.settingsReady='true';delete document.documentElement.dataset.settingsError;
   }catch(e){error();}finally{polling=false;setTimeout(poll,1500);}}
-  function velocity(){const minute=values.velocityTime==='min',factor=minute?60:1;return {unit:minute?'mm/min':'mm/s',fromSecond:n=>n*factor,toSecond:n=>n/factor,fromMinute:n=>n*factor/60,toMinute:n=>n*60/factor};}
+  function length(){const unit=values.units,factor=unit==='in'?25.4:unit==='cm'?10:1;return {unit,factor,fromMm:n=>n/factor,toMm:n=>n*factor,format:(n,d=unit==='in'?4:3)=>Number((n/factor).toFixed(d)).toString()};}
+  function velocity(){const minute=values.velocityTime==='min',time=minute?60:1,scale=length(),factor=time/scale.factor;return {unit:scale.unit+(minute?'/min':'/s'),fromSecond:n=>n*factor,toSecond:n=>n/factor,fromMinute:n=>n*factor/60,toMinute:n=>n*60/factor};}
   function routerSpeed(rpm){
     if(!Number.isFinite(rpm)||rpm<=0)return 'Router RPM unavailable · check setup sheet';
     const points=values.routerDialMap;if(!points.length)return rpm+' RPM · dial reference unavailable';
     const point=points.reduce((a,b)=>Math.abs(b.rpm-rpm)<Math.abs(a.rpm-rpm)?b:a),low=Math.min(...points.map(p=>p.rpm)),high=Math.max(...points.map(p=>p.rpm));
     return rpm.toLocaleString()+' RPM · Dial: '+point.label+' — estimated (~'+point.rpm.toLocaleString()+' RPM)'+(rpm<low||rpm>high?' · requested RPM outside mapped range':'');
   }
-  window.CncSettings={velocity,routerSpeed,get:key=>values[key],set,get ready(){return ready}};
+  window.CncSettings={length,velocity,routerSpeed,get:key=>values[key],set,get ready(){return ready}};
   document.addEventListener('focusout',()=>{setTimeout(()=>{if(document.activeElement?.matches('input,textarea,select'))return;for(const [key,value] of Object.entries(deferred)){if(!pending.has(key)&&values[key]!==value){values[key]=value;emit(key,value);}delete deferred[key];}},0);});
   poll();
 })();
