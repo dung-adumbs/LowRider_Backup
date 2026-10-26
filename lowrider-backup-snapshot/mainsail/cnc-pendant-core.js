@@ -148,6 +148,9 @@
     if(axis==='Z'&&z<safeJogZ&&target>safeJogZ){
       return command(safeJogZ,Math.min(selected,belowZ5Cap))+'\n'+command(target,selected);
     }
+    if(axis==='Z'&&z>safeJogZ&&target<safeJogZ){
+      return command(safeJogZ,selected)+'\n'+command(target,Math.min(selected,belowZ5Cap));
+    }
     return command(target,effectiveJogPercent(axis,target,status,selected));
   }
   function effectiveJogPercent(axis,target,status,selected=jogSpeed) {
@@ -692,11 +695,18 @@
   }
   async function runCncCommand(script, idleOnly=false) {
     if(script.trim()==='RESUME'){if(!window.CncPreflight)throw Error('Verification controls are loading.');return window.CncPreflight.resume();}
-    const response=await fetch('/printer/objects/query?webhooks&print_stats&pause_resume&virtual_sdcard&idle_timeout&toolhead',{cache:'no-store',signal:AbortSignal.timeout(5000)});
+    const response=await fetch('/printer/objects/query?webhooks&print_stats&pause_resume&virtual_sdcard&idle_timeout&toolhead&gcode_move',{cache:'no-store',signal:AbortSignal.timeout(5000)});
     const status=(await response.json()).result?.status;
     if(!response.ok||status?.webhooks.state!=='ready')throw Error('Klipper is not ready');
     if(idleOnly){const reason=manualMotionReason(status);if(reason)throw Error(reason);if(isMachinePaused(status)&&script!=='ZERO_Z')throw Error('Only tool Z zero may change while paused; keep the job XY origin unchanged.');}
     if(script.startsWith('ZERO_')){const axes=script==='ZERO_ALL'?'xyz':script.slice(5).toLowerCase();if([...axes].some(axis=>!status.toolhead.homed_axes.includes(axis)))throw Error('Home the selected axes before setting work zero');}
+    if(script==='RESET_WORK_ORIGIN'){
+      const reason=manualMotionReason(status);if(reason)throw Error(reason);
+      if(isMachinePaused(status)||status.print_stats?.state==='paused')throw Error('Finish or cancel the paused job before resetting work zeros');
+      if(!['x','y','z'].every(axis=>status.toolhead?.homed_axes?.includes(axis)))throw Error('Home all axes before resetting work zeros');
+      const position=status.gcode_move?.position;if(!position||![0,1,2].every(i=>Number.isFinite(position[i])))throw Error('Machine coordinates unavailable');
+      script='SET_GCODE_OFFSET X=0 Y=0 Z=0 MOVE=0\nG92 '+['X','Y','Z'].map((axis,i)=>axis+position[i].toFixed(9)).join(' ');
+    }
     const sent=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script})});
     const result=await sent.json();if(!sent.ok||result.error)throw Error(result.error?.message||'Command failed');
     if(script==='ZERO_Z'&&isMachinePaused(status)){if(window.CncPreflight)await window.CncPreflight.afterZero();}
@@ -764,6 +774,12 @@
           const choice=modal.add(label,async()=>{modal.dialog.close();try{await runCncCommand(script,true);allowBelowZ5=false;refreshJogChoices();}catch(error){homingNotice(error.message);}},script==='ZERO_Z'?'#1976d2':'#202020');
           if(script==='ZERO_Z'){choice.style.minHeight='56px';choice.style.fontSize='16px';choice.style.fontWeight='bold';}choice.disabled=[...axes].some(axis=>!controlStatus?.toolhead.homed_axes.includes(axis))||(isMachinePaused(controlStatus)&&script!=='ZERO_Z');if(isMachinePaused(controlStatus)&&script!=='ZERO_Z')choice.title='Keep the job XY origin unchanged while paused';
         }
+        const reset=modal.add('Reset work zero to machine origin',()=>{
+          modal.dialog.close();const confirm=cncDialog('Reset all work zeros?');
+          const note=document.createElement('p');note.textContent='Work X, Y and Z will match machine coordinates. No movement. Previous job zeros will be replaced; verify the job again before running. Safe Z still applies: fast jogging is available only above its clearance height. Use this with the table clear.';confirm.dialog.append(note);
+          const apply=confirm.add('Reset zeros',async()=>{apply.disabled=true;try{await runCncCommand('RESET_WORK_ORIGIN',true);allowBelowZ5=false;lastWorkZ=null;refreshJogChoices();confirm.dialog.close();homingNotice('Work zeros reset to machine origin. Recheck work/tool zeros before machining.');}catch(error){apply.disabled=false;homingNotice(error.message);}},'#1976d2');
+          confirm.add('Cancel',()=>confirm.dialog.close());confirm.open();
+        });reset.disabled=!!manualMotionReason(controlStatus)||isMachinePaused(controlStatus)||!['x','y','z'].every(axis=>controlStatus?.toolhead?.homed_axes?.includes(axis));
         modal.add('Cancel',()=>modal.dialog.close());modal.open();
       });
       const pause=create('lowrider-pause-resume','Pause');

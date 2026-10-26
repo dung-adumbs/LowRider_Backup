@@ -1,12 +1,12 @@
 {
   "klipper/klippy/extras/cnc_force_jog.py": "cbcd44d909a261ea14b179de1410f3fe6b06a7cb8bb068269a4c57d16a0b0cc9",
-  "mainsail/cnc-pendant-core.js": "e70c8d73b8ac871a4d755251cdd0f26a0144465a82b5300722352a2538a0ce7e",
+  "mainsail/cnc-pendant-core.js": "e1e5cf0f9a0ed613bdf73f9b6fb72ee6a1a8cc8802cad8956881bd8e146f6b1a",
   "mainsail/cnc-pendant-link.js": "2066bd0d95f0cd8fd34df60d4b4d653a376ea08e3a3edd55434b826efc7bb3cf",
   "mainsail/cnc-pendant-preflight.js": "6dec0b130700d0783bbd1acf0b2ce80f1540b792267ccbdc3d67865f10d518a8",
   "mainsail/cnc-pendant-settings.js": "82e573ac68a2d02dee4c8daf937f41390463d640a5078e78be7883934d9c7017",
   "mainsail/cnc-pendant.apk": "85bc68069ba381ef82d64fa7c95a390a210c2784b5466c0b2e38120418503657",
   "mainsail/cnc-pendant.css": "36446e17ba30914e103fc3e989fe9e4f594bee5a4a6c1187edcd2cae3a4507a5",
-  "mainsail/cnc-pendant.html": "8563f5e60a101a1e97a60be52e87a660df3f10438c4da9fcd5b4a6ad2608ba3a",
+  "mainsail/cnc-pendant.html": "1989829e28443c3691168c6438910d5028a820da45a5c9d8d613bed2798009db",
   "mainsail/cnc-pendant.js": "48dcfb74bb5f61a70829e61870b64608dcd7a1dfb333a1d256abe64070b24c6c",
   "mainsail/index.html": "6bff56f06c404a4d7bb2d09fd6d5961bf1a990be7880ce6d45a13f3895284f99",
   "mainsail/lowrider-light-controls.js": "51ac4b542d32d9ea146c97b41a304f484f8765de5fcdf1f4dad80a5f7aac8ace",
@@ -74,7 +74,7 @@
   "printer_data/gcodes/cnc_optimized/Test_cut_-_BONE_v3__combined__1792939322976_de8d7dd216a4-travel-f5d7e3f227.gcode": "4cdb7b5c716fa18561d054c0de775b449e220d4bfdfe67e68a4aad6a400c8cee",
   "printer_data/gcodes/cnc_optimized/again_Test_cut_-_BONE_v1__combined__1792910490459_f52961419be2-travel-e16baaf77d.gcode": "800835b6af71de152c39f7f7657b994ae7eef19b9920f66df1828ecbdf60f391",
   "printer_data/gcodes/old-machine-origin-before-20261021/README.txt": "7cd24c5c3a197402de7d7e31b6b43edfcb7bdc589bce932f768817b4c4214d09",
-  "settings/cnc_pendant.json": "c46a9af46c76a785e482b84584509eb0c047654f8fed4ae746b5956681263426",
+  "settings/cnc_pendant.json": "318662fb319f12d9996b37ca586d14fc3b8037662a5e98d4bedf2fa6dc617537",
   "settings/lowrider.json": "a9d7c7150a6e2f825452204206d7706897054a7e8cc52d0af03fca1742c55925",
   "settings/mainsail.json": "da3551a5c4d37b8a1078bcbd0bf01f18fd5738506d2586e1811bbc730aeb4778",
   "versions.json": "77ad8a571f84de72500e86e97e3101f0c73989314e695e958c6b310ee8223307"

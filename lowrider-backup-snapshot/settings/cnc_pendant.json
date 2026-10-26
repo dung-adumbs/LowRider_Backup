@@ -2,7 +2,7 @@
   "belowZ5Cap": 10,
   "jogScale": "coarse",
   "jogSpeed": 65,
-  "safeJogZ": 25,
+  "safeJogZ": 10,
   "temperatureWarning": 75,
   "travelXY": 3000,
   "travelZ": 180,
