@@ -2,9 +2,52 @@
   "belowZ5Cap": 10,
   "jogScale": "coarse",
   "jogSpeed": 65,
+  "routerDialMap": [
+    {
+      "label": "Lowest",
+      "rpm": 15700
+    },
+    {
+      "label": "Click 1 above lowest",
+      "rpm": 19300
+    },
+    {
+      "label": "2",
+      "rpm": 20800
+    },
+    {
+      "label": "Click 3 above lowest",
+      "rpm": 23600
+    },
+    {
+      "label": "3",
+      "rpm": 26300
+    },
+    {
+      "label": "3.5",
+      "rpm": 29200
+    },
+    {
+      "label": "4",
+      "rpm": 31300
+    },
+    {
+      "label": "4.5",
+      "rpm": 32800
+    },
+    {
+      "label": "5",
+      "rpm": 34200
+    },
+    {
+      "label": "5.5",
+      "rpm": 34900
+    }
+  ],
   "safeJogZ": 10,
   "temperatureWarning": 75,
   "travelXY": 3000,
   "travelZ": 180,
-  "units": "mm"
+  "units": "mm",
+  "velocityTime": "s"
 }

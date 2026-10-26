@@ -316,3 +316,11 @@ html[data-workspace=true] dialog[data-docked] .console-output{height:clamp(120px
 #pendant-context-next,#pendant-context-eta{font-variant-numeric:tabular-nums}
 
 .cnc-batch-prepare [hidden]{display:none!important}
+
+.cnc-router-highlight{padding:12px!important;background:#163547;border:1px solid #72c9ff;border-radius:7px;font-size:19px!important;font-weight:bold;color:#d6f1ff}.cnc-chip-button{border-radius:18px;padding:5px 9px;min-height:32px;font-size:12px;white-space:nowrap}.cnc-chip-button[data-grade=neutral]{color:#c5cbd1;background:#30353b}.cnc-chip-button[data-grade=amber]{color:#ffdc88;background:#4e3d15}.cnc-chip-button[data-grade=green]{color:#b9efc5;background:#204c2c}.cnc-chip-button[data-grade=orange]{color:#ffd0a0;background:#633910}.cnc-chip-button[data-grade=red]{color:#ffc2c2;background:#721e28}.cnc-chip-status{font-size:22px!important;font-weight:bold}.cnc-file-navigation{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px}.cnc-file-navigation button{flex:1;font-size:12px;padding:6px}.cnc-file-navigation [aria-current=page]{border-color:#87cdff;color:#d7f0ff!important;background:#17405c!important}#pendant-speed-cells .cnc-chip-button{margin-top:4px;white-space:normal;font-size:11px}
+
+.cnc-chip-status[data-grade=green]{color:#9ee6b1}.cnc-chip-status[data-grade=amber]{color:#ffd27f}.cnc-chip-status[data-grade=orange]{color:#ffb36a}.cnc-chip-status[data-grade=red]{color:#ff8d98}.cnc-chip-status[data-grade=neutral]{color:#c5cbd1}
+
+#pendant-speed-cells .cnc-chip-button{white-space:pre-line;line-height:1.15}
+
+.cnc-project-card{border:1px solid #456170;border-radius:5px;background:#203c4a;margin:6px 0;overflow:hidden}.cnc-project-card .cnc-project-group{margin:0;border:0;border-radius:0}.cnc-project-card-actions{display:flex;justify-content:flex-end;padding:0 6px 5px}.cnc-project-card-actions button{min-height:30px;font-size:12px}.cnc-project-archived,.cnc-project-archived .cnc-project-group{background:#080808!important;border-color:#666}.cnc-project-list-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;margin:8px 0}.cnc-project-list-controls select{flex:1;min-width:150px}.cnc-project-list-controls input{min-height:0}

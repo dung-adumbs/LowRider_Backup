@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "filename": "demo_CAM_v5__combined__1792988536739_cf4032b1ba27-travel-d588c505d5.gcode",
+  "sha256": "ef9003113a2f5a88dd5374de362189f1e576405648fec96aba2fcb701b19d079",
+  "program_body_sha256": "ef9003113a2f5a88dd5374de362189f1e576405648fec96aba2fcb701b19d079",
+  "size": 66512,
+  "modified_ns": 1792988539185322938,
+  "scan_seconds": 0.165,
+  "lines": 1829,
+  "moves": 661,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 6348,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "Stage 1 5: CHECK BEFORE USE - T05 - Flat end mill 3.175 mm single flute; diameter 3.175 mm; router 16000 RPM",
+      "start": 6359,
+      "end": 14486,
+      "tool_marker": true
+    },
+    {
+      "id": 2,
+      "label": "Stage 2 3: CHECK BEFORE USE - T03 - Flat end mill 2 mm single flute; diameter 2 mm; router 16000 RPM",
+      "start": 14497,
+      "end": 19080,
+      "tool_marker": true
+    },
+    {
+      "id": 3,
+      "label": "Stage 3 9: CHECK BEFORE USE - T09 - Ball end mill 3.175 mm two flute; diameter 3.175 mm; router 16000 RPM",
+      "start": 19091,
+      "end": 30291,
+      "tool_marker": true
+    },
+    {
+      "id": 4,
+      "label": "Stage 4 13: CHECK BEFORE USE - T13 - Tideway V groove cutter 90 deg; diameter 12.7 mm; router 16000 RPM",
+      "start": 30302,
+      "end": 39843,
+      "tool_marker": true
+    },
+    {
+      "id": 5,
+      "label": "Stage 5 14: CHECK BEFORE USE - T14 - Straight router bit 6.35 mm two flute; diameter 6.35 mm; router 16000 RPM",
+      "start": 39854,
+      "end": 48203,
+      "tool_marker": true
+    },
+    {
+      "id": 6,
+      "label": "Stage 6 5: CHECK BEFORE USE - T05 - Flat end mill 3.175 mm single flute; diameter 3.175 mm; router 16000 RPM",
+      "start": 48214,
+      "end": 52803,
+      "tool_marker": true
+    },
+    {
+      "id": 7,
+      "label": "Stage 7 12: CHECK BEFORE USE - T12 - Engraving cutter 60 deg 0.3 mm tip; diameter 3.175 mm; router 16000 RPM",
+      "start": 52814,
+      "end": 60380,
+      "tool_marker": true
+    },
+    {
+      "id": 8,
+      "label": "Stage 8 3: CHECK BEFORE USE - T03 - Flat end mill 2 mm single flute; diameter 2 mm; router 16000 RPM",
+      "start": 60391,
+      "end": 64777,
+      "tool_marker": true
+    },
+    {
+      "id": 9,
+      "label": "Stage 9 9: CHECK BEFORE USE - T09 - Ball end mill 3.175 mm two flute; diameter 3.175 mm; router 16000 RPM",
+      "start": 64788,
+      "end": 66512,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      0.0,
+      0.0,
+      -8.0
+    ],
+    "max": [
+      400.0,
+      100.0,
+      5.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-10-26T05:35:34.889504+00:00"
+}

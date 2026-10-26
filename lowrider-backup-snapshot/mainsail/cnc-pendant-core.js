@@ -53,7 +53,7 @@
     catch(error){homingNotice(error.message);}
   }
   function showForcedWarning(){
-    const modal=cncDialog('Forced unhomed motion');const note=document.createElement('p');note.textContent='Position and travel limits are UNKNOWN on unhomed axes. Safe Z and keep-out clearance cannot be verified there. Forced buttons move only 0.1 or 1 mm at 1 mm/s, one move per press. Homed axes retain travel checks; unknown clearance is treated conservatively. Any homing, restart or motor disable exits this mode.';modal.dialog.append(note);
+    const modal=cncDialog('Forced unhomed motion');const note=document.createElement('p');note.textContent='Position and travel limits are UNKNOWN on unhomed axes. Safe Z and keep-out clearance cannot be verified there. Forced buttons move only 0.1 or 1 mm at '+(globalThis.window?.CncSettings?.velocity?.().fromSecond(1)||1)+' '+(globalThis.window?.CncSettings?.velocity?.().unit||'mm/s')+', one move per press. Homed axes retain travel checks; unknown clearance is treated conservatively. Any homing, restart or motor disable exits this mode.';modal.dialog.append(note);
     modal.add('I understand — enable forced motion',()=>{modal.dialog.close();setForcedMode(true);},'#b71c1c');modal.add('Cancel',()=>modal.dialog.close());modal.open();
   }
   async function refreshForceStatus(){
@@ -108,7 +108,7 @@
     const home=document.getElementById('lowrider-home-dialog');if(home){home.textContent=enabled?'Home / Forced':'Home';home.style.backgroundColor=homeButtonColor(status,enabled);home.dataset.allHomed=String(status?.toolhead?.homed_axes==='xyz');}
     let banner=document.getElementById('lowrider-forced-banner');
     if(pad&&!banner){banner=document.createElement('div');banner.id='lowrider-forced-banner';banner.style.cssText='display:none;background:#b71c1c;color:white;font-size:11px;font-weight:bold;text-align:center;padding:6px;margin:4px 0';pad.before(banner);}
-    if(banner){banner.style.display=enabled?'block':'none';const missing='XYZ'.split('').filter(a=>!status?.toolhead?.homed_axes?.includes(a.toLowerCase())).join(', ');banner.textContent=`FORCED UNHOMED MOTION: ${missing} — position / limits unknown; 1 mm/s. Yellow motor: Move; red: Hold.`;}
+    if(banner){banner.style.display=enabled?'block':'none';const missing='XYZ'.split('').filter(a=>!status?.toolhead?.homed_axes?.includes(a.toLowerCase())).join(', ');banner.textContent=`FORCED UNHOMED MOTION: ${missing} — position / limits unknown; ${globalThis.window?.CncSettings?.velocity?.().fromSecond(1)||1} ${globalThis.window?.CncSettings?.velocity?.().unit||'mm/s'}. Yellow motor: Move; red: Hold.`;}
   }
 
   const forceStyle=document.createElement('style');forceStyle.textContent='@keyframes cncForceFlash{50%{filter:brightness(.55)}}.lowrider-force-flash:not(:disabled){animation:cncForceFlash .7s infinite}.lowrider-forced-panel{outline:3px solid #ff1744;outline-offset:2px}';document.head.append(forceStyle);
@@ -308,8 +308,8 @@
     const rates = document.getElementById('lowrider-jog-rates');
     if(rates){
       const active=controlStatus?.gcode_move?effectiveJogPercent('X',0,controlStatus):jogSpeed;
-      const number=n=>Number(n.toFixed(2)).toString();
-      const text=forcedEnabled()?'XYZ'.split('').every(a=>forcedAxis(a))?'Forced jog: 1 mm/s':'XYZ'.split('').map(a=>`${a} ${forcedAxis(a)?'1':number((a==='Z'?25:200)*active/100)}`).join(' / ')+' mm/s':`XY ${number(200*active/100)} / Z ${number(25*active/100)} mm/s`;
+      const velocity=globalThis.window?.CncSettings?.velocity?.()||{unit:'mm/s',fromSecond:n=>n};const number=n=>Number(velocity.fromSecond(n).toFixed(2)).toString();
+      const text=forcedEnabled()?'XYZ'.split('').every(a=>forcedAxis(a))?'Forced jog: '+number(1)+' '+velocity.unit:'XYZ'.split('').map(a=>`${a} ${forcedAxis(a)?number(1):number((a==='Z'?25:200)*active/100)}`).join(' / ')+' '+velocity.unit:`XY ${number(200*active/100)} / Z ${number(25*active/100)} ${velocity.unit}`;
       if(rates.textContent!==text)rates.textContent=text;
       rates.style.display='block';rates.title='Commanded jog speeds after the safe-height cap; acceleration may reduce speed during short moves.';
     }
