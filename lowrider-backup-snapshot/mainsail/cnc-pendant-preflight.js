@@ -22,6 +22,7 @@
   const action=$('#pendant-quadrant-resume'),needsStage=paused&&!state.filename;
   action.disabled=latest?.webhooks?.state!=='ready'||!!missing.length||busy||running||isReturning()||(!needsStage&&(paused?!canResume():state.state!=='analyzed'||!state.verification?.approved));
   text(action,isReturning()?'Returning…':state.state==='scanning'?'Verifying…':paused?(needsStage?'Verify paused file…':'Resume job…'):'Start job…');
+  if(state.state==='analyzed'&&!state.verification?.approved&&!running&&!needsStage&&!busy&&!isReturning()){action.disabled=false;text(action,"What’s wrong?");}
   const homing=$('#pendant-homing-needed');if(!card.hidden&&homing)homing.hidden=true;
   const old=$('#lowrider-pause-resume');if(paused&&old)old.disabled=!canResume();
   ui().queueFit();
@@ -30,12 +31,12 @@
   const body=$('.panel-body'),zone=$('#pendant-jog-zone'),pad=$('#lowrider-jog-pad');if(!body||!zone||!pad||$('#pendant-stage-card'))return;
   const card=el('section');card.id='pendant-stage-card';card.hidden=true;card.setAttribute('aria-label','Staged CNC job');
   const filename=el('strong');filename.id='pendant-stage-filename';const result=el('div');result.id='pendant-stage-result';result.setAttribute('role','status');const progress=el('progress');progress.id='pendant-scan-progress';progress.max=1;
-  const action=el('button','Start job…');action.id='pendant-quadrant-resume';action.addEventListener('click',()=>latest?.pause_resume?.is_paused?resume():startJob());
+  const action=el('button','Start job…');action.id='pendant-quadrant-resume';action.addEventListener('click',()=>state.state==='analyzed'&&!state.verification?.approved?problemDialog():latest?.pause_resume?.is_paused?resume():startJob());
   const controls=el('div',undefined,'preflight-actions'),details=el('button','Details');details.addEventListener('click',detailsDialog);controls.append(details);card.append(filename,result,progress,action,controls);pad.append(card);render();
  }
  async function clearLoadedFile(){if(busy||isReturning())return false;busy=true;render();try{state=await api('clear','POST',{});return true;}catch(error){const m=ui().modal('Cannot clear loaded file');m.insert(el('p',error.message));return false;}finally{busy=false;await refresh();}}
  async function refresh(){if(polling)return state;polling=true;try{state=await api('status');if(state.operation?.state==='complete'||state.operation?.state==='failed')resumePending=false;if(state.operation?.state==='failed'&&state.operation.id!==failedOperation){failedOperation=state.operation.id;const m=ui().modal('Resume stopped — check controller');m.insert(el('p',state.operation.message));}}catch(error){state={...state,state:'unavailable',verification:{approved:false,reason:'Verification service unavailable: '+error.message}};}finally{polling=false;render();}return state;}
- async function stage(filename){busy=true;render();try{state=await api('stage','POST',{filename});}finally{busy=false;render();}await refresh();}
+ async function stage(filename,reuse_stage_id=undefined){busy=true;render();try{state=await api('stage','POST',{filename,reuse_stage_id});}finally{busy=false;render();}await refresh();}
  function verificationText(value){
   if(!value)return 'Verification has not completed.';
   const lines=[value.reason||'',...(value.violations||[]).map(v=>v.message),...(value.return_violations||[]).map(v=>v.message),...(value.keepout_violations||[]).map(v=>v.message)];
@@ -43,6 +44,34 @@
   if(value.label)lines.push('Tool section: '+value.label);if(value.scope)lines.push(value.scope);
   if(value.issues)for(const issue of value.issues.slice(0,8))lines.push(`Line ${issue.line}: ${issue.message}`);
   return lines.filter(Boolean).join('\n');
+ }
+ function placementExplanation(value,status,paused=false){
+  const lines=[];if(!value?.machine_min||!value?.machine_max||!['x','y','z'].every(axis=>status?.toolhead?.homed_axes?.includes(axis)))return lines;
+  const low=status?.toolhead?.axis_minimum,high=status?.toolhead?.axis_maximum;
+  for(let i=0;i<3;i++){
+   const a=value.machine_min[i],b=value.machine_max[i];if(![a,b,low?.[i],high?.[i]].every(Number.isFinite))continue;
+   const under=Math.max(0,low[i]-a),over=Math.max(0,b-high[i]);if(under<=.00001&&over<=.00001)continue;
+   const axis='XYZ'[i],span=b-a,available=high[i]-low[i],minShift=low[i]-a,maxShift=high[i]-b;
+   if(under>.00001)lines.push(axis+' travel exceeds '+axis+' minimum by '+under.toFixed(2)+' mm.');if(over>.00001)lines.push(axis+' travel exceeds '+axis+' maximum by '+over.toFixed(2)+' mm.');
+   const wa=value.work_min?.[i],wb=value.work_max?.[i];if([wa,wb].every(Number.isFinite)){const offset=a-wa;lines.push('Required work '+axis+': '+wa.toFixed(2)+' to '+wb.toFixed(2)+' mm. Available work '+axis+' with current zero: '+(low[i]-offset).toFixed(2)+' to '+(high[i]-offset).toFixed(2)+' mm.');}
+   if(minShift>maxShift+.00001){lines.push('An offset cannot make '+axis+' fit: job span '+span.toFixed(2)+' mm exceeds available travel '+available.toFixed(2)+' mm. Change the setup/toolpath.');continue;}
+   const shift=Math.max(minShift,Math.min(0,maxShift));
+   lines.push('Travel space is sufficient: the program placement would need at least '+(shift>=0?'+':'')+shift.toFixed(2)+' mm along '+axis+'.');
+   if(paused&&i<2)lines.push('Do not shift X/Y while paused. Restore the original job origin; do not relocate a partly machined job.');
+   else if(i===2)lines.push('Check actual stock-top/tool Z and available physical clearance. Do not change tool zero merely to make this check pass.');
+   else lines.push('Reposition the work/setup and establish the correct work zero, then verify again.');
+  }
+  return lines;
+ }
+ async function problemDialog(){
+  await refresh();const m=ui().modal('What’s wrong?');
+  const lines=placementExplanation(state.verification,latest,!!latest?.pause_resume?.is_paused);
+  if(!lines.length)m.insert(el('p',state.verification?.approved?'The current setup now passes verification. Close and review Start again.':state.verification?.reason||'Verification is required.'));
+  for(const line of lines)m.insert(el('p',line));
+  for(const v of [...(state.verification?.return_violations||[]),...(state.verification?.keepout_violations||[])])m.insert(el('p',v.message));
+  const details=el('details');details.append(el('summary','Details / machine coordinates'),el('pre',verificationText(state.verification),'preflight-details'));m.insert(details);
+  m.insert(el('p','This describes the checked tool section only. No offsets are changed here. Travel fit does not prove clearance from stock, clamps or keep-outs.'));
+  m.add('Verify again',async()=>{const r=await api('verify','POST',{});state.verification=r;m.dialog.close();await problemDialog();});
  }
  async function detailsDialog(){
   const m=ui().modal('G-code verification'),info=el('pre',undefined,'preflight-details');m.insert(info);m.insert(el('p','Travel verification does not certify stock, clamps, cutter length or fixture clearance.'));
@@ -80,19 +109,22 @@
   const row=el('label','Run speed (%)','dialog-field cnc-run-override'),input=el('input');input.type='number';input.min=1;input.max=300;input.step=1;input.value=Math.round(value);input.setAttribute('aria-label','Run speed (%)');row.append(input);const paint=()=>row.classList.toggle('cnc-fast',Number(input.value)>100);input.addEventListener('input',paint);paint();m.insert(row);return ()=>{const n=Number(input.value);if(!input.value.trim()||!Number.isFinite(n)||n<1||n>300)throw Error('Choose a run speed from1to300%.');return n;};
  }
  function toolInfo(m){const info=window.CncRunUI?.confirmInfo();if(!info){m.insert(el('p','Tool details unavailable — check the posted setup sheet.'));return;}m.insert(el('p',info.tool));m.insert(el('p','Operation: '+info.operation));m.insert(el('p','Requested router speed: '+(info.rpm??'Unknown')+' RPM. Use your verified dial mapping. Router OFF for tool work; set the fitted tool Z if changed. For cutting, set the dial and start the spindle before Resume. Dry run: leave spindle OFF.'));}
- async function startCopy(percent,captured){
+ async function startCopy(percent,captured,progress=()=>{}){
+  progress('Reading and checking the prepared program…');
   if(!window.CncRunUI||!window.CncProjects)throw Error('Run controls unavailable. Refresh Pendant.');await refresh();if(state.id!==captured)throw Error('The selected program changed. Reopen Start.');
   const source=state.filename,expected=state.report?.sha256;if(!expected)throw Error('Wait for source analysis.');const r=await fetch('/server/files/gcodes/'+source.split('/').map(encodeURIComponent).join('/'),{cache:'no-store',signal:AbortSignal.timeout(30000)});if(!r.ok)throw Error('Cannot read the prepared program.');const bytes=new Uint8Array(await r.arrayBuffer());if(bytes.length>64*1024*1024||window.CncProjects.model.sha256(bytes)!==expected)throw Error('Prepared source changed. Stage and review it again.');
   if(!/^; CNC_ROLLUP_VERSION: 1\r?$/m.test(new TextDecoder().decode(bytes))){if(percent===100)return captured;throw Error('A custom starting speed requires a prepared Pendant program.');}
+  progress('Applying your starting speed…');await new Promise(resolve=>setTimeout(resolve,0));
   const output=window.CncRunUI.runBytes(bytes,percent),hash=window.CncProjects.model.sha256(output),filename='run-'+Date.now()+'-'+hash.slice(0,16)+'.gcode',path='cnc_runs/'+filename,form=new FormData();form.append('root','gcodes');form.append('path','cnc_runs');form.append('file',new Blob([output]),filename);
-  await refresh();if(state.id!==captured)throw Error('Selection changed during preparation.');const upload=await fetch('/server/files/upload',{method:'POST',body:form});if(!upload.ok)throw Error('Cannot save the run-specific copy.');const check=await fetch('/server/files/gcodes/'+path,{cache:'no-store'});if(!check.ok||window.CncProjects.model.sha256(new Uint8Array(await check.arrayBuffer()))!==hash)throw Error('Run-copy checksum differs. Nothing started.');
-  await stage(path);const id=state.id;for(let i=0;i<180;i++){await new Promise(resolve=>setTimeout(resolve,500));await refresh();if(state.id!==id)throw Error('Another client changed the selected program.');if(state.state==='error')throw Error(state.message||'Run-copy analysis failed.');if(state.state==='analyzed')return id;}throw Error('Analysis is still running. Nothing started; wait and review the staged run copy.');
+  await refresh();if(state.id!==captured)throw Error('Selection changed during preparation.');progress('Saving and checking the run copy…');const upload=await fetch('/server/files/upload',{method:'POST',body:form});if(!upload.ok)throw Error('Cannot save the run-specific copy.');const check=await fetch('/server/files/gcodes/'+path,{cache:'no-store'});if(!check.ok||window.CncProjects.model.sha256(new Uint8Array(await check.arrayBuffer()))!==hash)throw Error('Run-copy checksum differs. Nothing started.');
+  progress('Analysing the run copy — this may take a few seconds…');await stage(path,captured);const id=state.id;if(state.state==='analyzed')return id;for(let i=0;i<180;i++){await new Promise(resolve=>setTimeout(resolve,500));await refresh();if(state.id!==id)throw Error('Another client changed the selected program.');if(state.state==='error')throw Error(state.message||'Run-copy analysis failed.');if(state.state==='analyzed')return id;}throw Error('Analysis is still running. Nothing started; wait and review the staged run copy.');
  }
  async function startJob(){
   if(busy)return;busy=true;render();try{await refresh();const verified=await api('verify','POST',{});state.verification=verified;if(!verified.approved){await detailsDialog();return;}
    const captured=state.id,filename=state.filename,m=ui().modal('Start verified CNC job?');m.dialog.querySelector('.dialog-actions button').textContent='Cancel';m.insert(el('p',window.CncRunUI?.current?.stage?.setup||filename));m.insert(el('p','Select the starting run speed before motion. Previous setting: '+Math.round((latest?.gcode_move?.speed_factor||1)*100)+'%. Above100% increases cutting AND current travel rates.'));
    const selected=overrideInput(m,100);m.insert(el('p','Confirm work/tool zero, tool and clamps, clearance and manual router power. For a no-tool test, keep the spindle OFF.'));
-   m.add('Start job',async()=>{busy=true;m.dialog.setAttribute('aria-busy','true');m.dialog.querySelector('.dialog-actions button').disabled=true;render();try{const id=await startCopy(selected(),captured);const result=await api('verify','POST',{});state.verification=result;if(!result.approved)throw Error(result.reason||'Run-copy verification failed.');m.dialog.close();await api('start','POST',{stage_id:id});}catch(error){m.feedback.textContent=error.message;}finally{busy=false;m.dialog.removeAttribute('aria-busy');m.dialog.querySelector('.dialog-actions button').disabled=false;await refresh();}});
+   const progress=el('p','','cnc-start-progress');progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');progress.hidden=true;m.insert(progress);const showProgress=text=>{progress.hidden=false;progress.classList.add('cnc-processing');progress.textContent=text;};
+   const start=m.add('Start job',async()=>{if(m.dialog.hasAttribute('aria-busy'))return;busy=true;start.disabled=true;m.dialog.querySelector('input').disabled=true;showProgress('Preparing to start — no motion yet…');m.dialog.setAttribute('aria-busy','true');m.dialog.querySelector('.dialog-actions button').disabled=true;render();try{const id=await startCopy(selected(),captured,showProgress);showProgress('Checking the current machine setup…');const result=await api('verify','POST',{});state.verification=result;if(!result.approved)throw Error(result.reason||'Run-copy verification failed.');showProgress('Sending Start to the controller…');await api('start','POST',{stage_id:id});m.dialog.close();}catch(error){progress.hidden=true;m.feedback.textContent=error.message;}finally{busy=false;start.disabled=false;m.dialog.querySelector('input').disabled=false;progress.classList.remove('cnc-processing');m.dialog.removeAttribute('aria-busy');m.dialog.querySelector('.dialog-actions button').disabled=false;await refresh();}});
   }catch(error){const m=ui().modal('Start blocked');m.insert(el('p',error.message));}finally{busy=false;render();}
  }
  function viewer(filename){const m=ui().modal('Toolpath viewer');m.dialog.classList.add('pendant-viewer-dialog');const name=el('p',filename,'pendant-viewer-filename');name.title=filename;m.insert(name);const frame=el('iframe');frame.title='Mainsail G-code toolpath viewer';frame.src='/viewer?filename='+encodeURIComponent('gcodes/'+filename);frame.className='preflight-viewer';m.insert(frame);m.insert(el('p','Visualization is not verification. Enable travel visibility for CNC paths.','pendant-viewer-note'));}

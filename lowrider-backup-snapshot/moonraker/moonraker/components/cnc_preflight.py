@@ -2,7 +2,7 @@
 from __future__ import annotations
 import asyncio, datetime, hashlib, json, math, pathlib, uuid, logging, os
 from ..common import RequestType
-from .cnc_gcode_scan import scan_file, metadata_from_header, fingerprints, evaluate_bounds, thumbnail_data_url, keepout_interferences
+from .cnc_gcode_scan import scan_file, reuse_speed_only_analysis, metadata_from_header, fingerprints, evaluate_bounds, thumbnail_data_url, keepout_interferences
 from .cnc_travel_optimize import inspect_header, optimize_bytes, MAX_BYTES
 from .cnc_health import CNCHealth
 
@@ -190,10 +190,16 @@ class CNCPreflight:
             filename=request.get_str('filename');path=self._path(filename);s=await self._snapshot()
             if s.get('virtual_sdcard',{}).get('is_active'):raise self.server.error('Pause or stop the running file before staging',409)
             if s.get('pause_resume',{}).get('is_paused') and s.get('print_stats',{}).get('filename')!=filename:raise self.server.error('While paused, stage only the active file',409)
+            reused=None
+            if self.model is not None and request.get_str('reuse_stage_id','')==self.job.get('id') and filename!=self.job.get('filename') and pathlib.PurePosixPath(filename).parent.as_posix()=='cnc_runs':
+                reused=await asyncio.to_thread(reuse_speed_only_analysis,self._path(self.job['filename']),path,self.model)
             self.thumbnail_cancel=True;self.operation={'state':'idle'}
             self.generation+=1;generation=self.generation;self.model=None;self.bounds_cache={};self.initial_machine=s.get('gcode_move',{}).get('position',[0,0,0])[:3]
             self.job={'id':uuid.uuid4().hex,'filename':filename,'state':'scanning','progress':0,'lines':0,'message':'Scanning G-code in the background…','metadata':metadata_from_header(path)}
-            asyncio.create_task(self._scan(path,generation));return dict(self.job)
+            if reused is not None:
+                self.model=reused;self.job.update(state='analyzed',progress=1,report=reused.report(),message='Reused verified motion analysis; checking current setup.')
+            else:asyncio.create_task(self._scan(path,generation))
+            return dict(self.job)
     async def _scan(self,path,generation):
         async with self.scan_lock:
             if generation!=self.generation:return
