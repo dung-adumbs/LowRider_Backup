@@ -1,7 +1,7 @@
 {
-  "belowZ5Cap": 10,
+  "belowZ5Cap": 100,
   "jogScale": "coarse",
-  "jogSpeed": 65,
+  "jogSpeed": 50,
   "routerDialMap": [
     {
       "label": "Lowest",
@@ -44,7 +44,7 @@
       "rpm": 34900
     }
   ],
-  "safeJogZ": 10,
+  "safeJogZ": 0,
   "temperatureWarning": 75,
   "travelXY": 3000,
   "travelZ": 180,
