@@ -1,6 +1,6 @@
 {
   "belowZ5Cap": 100,
-  "jogScale": "fine",
+  "jogScale": "coarse",
   "jogSpeed": 50,
   "routerDialMap": [
     {
