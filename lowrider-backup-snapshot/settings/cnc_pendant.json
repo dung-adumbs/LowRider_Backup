@@ -1,5 +1,376 @@
 {
   "belowZ5Cap": 100,
+  "endstop_test_x": {
+    "baseline": null,
+    "last": {
+      "aborted": true,
+      "at": "2026-10-29T04:28:39.543Z",
+      "axis": "x",
+      "completed": 1,
+      "cycles": [
+        {
+          "stepper_x": {
+            "error": "No triggered transition occurred during the 0.1 mm measurement steps."
+          },
+          "valid": false
+        }
+      ],
+      "requested": 5,
+      "resolution": 0.1,
+      "settled": false,
+      "summary": {
+        "stepper_x": {
+          "label": "X",
+          "release": null,
+          "successful": 0,
+          "travel": null,
+          "trip": null
+        }
+      }
+    },
+    "previous": {
+      "aborted": false,
+      "at": "2026-10-29T04:27:45.158Z",
+      "axis": "x",
+      "completed": 5,
+      "cycles": [
+        {
+          "stepper_x": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          },
+          "valid": true
+        },
+        {
+          "stepper_x": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          },
+          "valid": true
+        },
+        {
+          "stepper_x": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          },
+          "valid": true
+        },
+        {
+          "stepper_x": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          },
+          "valid": true
+        },
+        {
+          "stepper_x": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          },
+          "valid": true
+        }
+      ],
+      "requested": 20,
+      "resolution": 0.1,
+      "settled": true,
+      "summary": {
+        "stepper_x": {
+          "label": "X",
+          "release": {
+            "average": 0.3,
+            "deviation": 0,
+            "max": 0.3,
+            "min": 0.3,
+            "variation": 0
+          },
+          "successful": 5,
+          "travel": {
+            "average": 0.3,
+            "deviation": 0,
+            "max": 0.3,
+            "min": 0.3,
+            "variation": 0
+          },
+          "trip": {
+            "average": 0,
+            "deviation": 0,
+            "max": 0,
+            "min": 0,
+            "variation": 0
+          }
+        }
+      }
+    }
+  },
+  "endstop_test_y": {
+    "baseline": null,
+    "last": {
+      "aborted": false,
+      "at": "2026-10-29T04:30:46.629Z",
+      "axis": "y",
+      "completed": 5,
+      "cycles": [
+        {
+          "stepper_y": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          },
+          "valid": true,
+          "y1": {
+            "error": null,
+            "release": 0.9,
+            "trip": 0
+          }
+        },
+        {
+          "stepper_y": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          },
+          "valid": true,
+          "y1": {
+            "error": null,
+            "release": 0.9,
+            "trip": 0
+          }
+        },
+        {
+          "stepper_y": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0.1
+          },
+          "valid": true,
+          "y1": {
+            "error": null,
+            "release": 0.9,
+            "trip": 0
+          }
+        },
+        {
+          "stepper_y": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0.1
+          },
+          "valid": true,
+          "y1": {
+            "error": null,
+            "release": 0.9,
+            "trip": 0
+          }
+        },
+        {
+          "stepper_y": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          },
+          "valid": true,
+          "y1": {
+            "error": null,
+            "release": 0.9,
+            "trip": 0
+          }
+        }
+      ],
+      "requested": 5,
+      "resolution": 0.1,
+      "settled": true,
+      "summary": {
+        "stepper_y": {
+          "label": "Y",
+          "release": {
+            "average": 0.3,
+            "deviation": 0,
+            "max": 0.3,
+            "min": 0.3,
+            "variation": 0
+          },
+          "successful": 5,
+          "travel": {
+            "average": 0.26,
+            "deviation": 0.049,
+            "max": 0.3,
+            "min": 0.2,
+            "variation": 0.1
+          },
+          "trip": {
+            "average": 0.04,
+            "deviation": 0.049,
+            "max": 0.1,
+            "min": 0,
+            "variation": 0.1
+          }
+        },
+        "y1": {
+          "label": "Y1",
+          "release": {
+            "average": 0.9,
+            "deviation": 0,
+            "max": 0.9,
+            "min": 0.9,
+            "variation": 0
+          },
+          "successful": 5,
+          "travel": {
+            "average": 0.9,
+            "deviation": 0,
+            "max": 0.9,
+            "min": 0.9,
+            "variation": 0
+          },
+          "trip": {
+            "average": 0,
+            "deviation": 0,
+            "max": 0,
+            "min": 0,
+            "variation": 0
+          }
+        }
+      }
+    },
+    "previous": null
+  },
+  "endstop_test_z": {
+    "baseline": null,
+    "last": {
+      "aborted": false,
+      "at": "2026-10-29T04:35:12.397Z",
+      "axis": "z",
+      "completed": 5,
+      "cycles": [
+        {
+          "stepper_z": {
+            "error": null,
+            "release": 0.5,
+            "trip": 0
+          },
+          "valid": true,
+          "z1": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          }
+        },
+        {
+          "stepper_z": {
+            "error": null,
+            "release": 0.5,
+            "trip": 0
+          },
+          "valid": true,
+          "z1": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          }
+        },
+        {
+          "stepper_z": {
+            "error": null,
+            "release": 0.5,
+            "trip": 0
+          },
+          "valid": true,
+          "z1": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          }
+        },
+        {
+          "stepper_z": {
+            "error": null,
+            "release": 0.6,
+            "trip": 0
+          },
+          "valid": true,
+          "z1": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          }
+        },
+        {
+          "stepper_z": {
+            "error": null,
+            "release": 0.5,
+            "trip": 0
+          },
+          "valid": true,
+          "z1": {
+            "error": null,
+            "release": 0.3,
+            "trip": 0
+          }
+        }
+      ],
+      "requested": 20,
+      "resolution": 0.1,
+      "settled": true,
+      "summary": {
+        "stepper_z": {
+          "label": "Z",
+          "release": {
+            "average": 0.52,
+            "deviation": 0.04,
+            "max": 0.6,
+            "min": 0.5,
+            "variation": 0.1
+          },
+          "successful": 5,
+          "travel": {
+            "average": 0.52,
+            "deviation": 0.04,
+            "max": 0.6,
+            "min": 0.5,
+            "variation": 0.1
+          },
+          "trip": {
+            "average": 0,
+            "deviation": 0,
+            "max": 0,
+            "min": 0,
+            "variation": 0
+          }
+        },
+        "z1": {
+          "label": "Z1",
+          "release": {
+            "average": 0.3,
+            "deviation": 0,
+            "max": 0.3,
+            "min": 0.3,
+            "variation": 0
+          },
+          "successful": 5,
+          "travel": {
+            "average": 0.3,
+            "deviation": 0,
+            "max": 0.3,
+            "min": 0.3,
+            "variation": 0
+          },
+          "trip": {
+            "average": 0,
+            "deviation": 0,
+            "max": 0,
+            "min": 0,
+            "variation": 0
+          }
+        }
+      }
+    },
+    "previous": null
+  },
   "jogScale": "coarse",
   "jogSpeed": 50,
   "routerDialMap": [
@@ -45,6 +416,8 @@
     }
   ],
   "safeJogZ": 0,
+  "spoilboardX": 8.2,
+  "spoilboardY": 9.5,
   "temperatureWarning": 75,
   "travelXY": 3000,
   "travelZ": 180,
