@@ -371,8 +371,11 @@
     },
     "previous": null
   },
+  "homeXYMode": "spoilboard",
   "jogScale": "coarse",
   "jogSpeed": 50,
+  "lastWorkOriginX": 8.2,
+  "lastWorkOriginY": 9.5,
   "routerDialMap": [
     {
       "label": "Lowest",

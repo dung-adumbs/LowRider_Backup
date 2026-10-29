@@ -552,9 +552,18 @@
       notify(`${action} in progress...`);
       const response=await pending;
       const result=await response.json();if(!response.ok||result.error)throw Error(result.error?.message||'Homing command failed.');
-      notify(`${action} complete.`);
-    }catch(error){notify(`Command not completed: ${error.message}`);}
+      notify(`${action} complete.`);return true;
+    }catch(error){notify(`Command not completed: ${error.message}`);return false;}
     finally{homingPending=false;updateAvailability();}
+  }
+  function homeXYChoice(){
+    const mode=window.CncSettings?.get('homeXYMode')||'spoilboard';
+    return mode==='machine'?{mode,label:'Machine coordinates',command:'RESET_XY_TO_MACHINE'}:mode==='last'?{mode,label:'Last saved work origin',command:'RESET_XY_TO_LAST'}:{mode:'spoilboard',label:'Spoilboard coordinates',command:'RESET_XY_TO_SPOILBOARD'};
+  }
+  async function homeAllWithPolicy(){
+    const choice=homeXYChoice(),homed=await runHomeCommand('HOME_ALL');if(!homed)return;
+    try{await runCncCommand(choice.command,true);homingNotice(`Homing complete. Work XY now uses ${choice.label.toLowerCase()}. Tool Z zero was not changed.`);}
+    catch(error){homingNotice(`Homing completed, but ${choice.label.toLowerCase()} could not be applied: ${error.message}`);}
   }
   document.addEventListener('click', event => {
     const button = event.target.closest?.('.macrogroup_lowrider-homing_panel button, button[data-lowrider-shake], button[data-lowrider-disable-steppers]');
@@ -614,7 +623,7 @@
     }
     no.addEventListener('click', () => dialog.close());
     yes.addEventListener('click', async () => {
-      yes.disabled=true;dialog.close();await runHomeCommand(command,shake);
+      yes.disabled=true;dialog.close();if(!shake&&command==='HOME_ALL')await homeAllWithPolicy();else await runHomeCommand(command,shake);
     });
     dialog.addEventListener('close', () => { dialog.remove(); button.focus(); });
     buttons.append(no, yes);
@@ -694,6 +703,7 @@
     } finally { setTimeout(refreshEndstops, 500); }
   }
   async function runCncCommand(script, idleOnly=false) {
+    const requestedScript=script;
     if(script.trim()==='RESUME'){if(!window.CncPreflight)throw Error('Verification controls are loading.');return window.CncPreflight.resume();}
     const response=await fetch('/printer/objects/query?webhooks&print_stats&pause_resume&virtual_sdcard&idle_timeout&toolhead&gcode_move',{cache:'no-store',signal:AbortSignal.timeout(5000)});
     const status=(await response.json()).result?.status;
@@ -707,8 +717,22 @@
       const position=status.gcode_move?.position;if(!position||![0,1,2].every(i=>Number.isFinite(position[i])))throw Error('Machine coordinates unavailable');
       script='SET_GCODE_OFFSET X=0 Y=0 Z=0 MOVE=0\nG92 '+['X','Y','Z'].map((axis,i)=>axis+position[i].toFixed(9)).join(' ');
     }
+    if(['RESET_XY_TO_MACHINE','RESET_XY_TO_SPOILBOARD','RESET_XY_TO_LAST'].includes(script)){
+      const reason=manualMotionReason(status);if(reason)throw Error(reason);
+      if(isMachinePaused(status)||status.print_stats?.state==='paused')throw Error('Finish or cancel the paused job before resetting work XY');
+      if(!['x','y'].every(axis=>status.toolhead?.homed_axes?.includes(axis)))throw Error('Home X and Y before resetting work XY');
+      const position=status.gcode_move?.position;if(!position||![0,1].every(i=>Number.isFinite(position[i])))throw Error('Machine coordinates unavailable');
+      const origin=script==='RESET_XY_TO_MACHINE'?[0,0]:script==='RESET_XY_TO_LAST'?[Number(window.CncSettings?.get('lastWorkOriginX')),Number(window.CncSettings?.get('lastWorkOriginY'))]:[Number(window.CncSettings?.get('spoilboardX')),Number(window.CncSettings?.get('spoilboardY'))];
+      if(!origin.every(Number.isFinite))throw Error('Selected work origin coordinates unavailable');
+      script='SET_GCODE_OFFSET X=0 Y=0 MOVE=0\nG92 X'+(position[0]-origin[0]).toFixed(9)+' Y'+(position[1]-origin[1]).toFixed(9);
+    }
     const sent=await fetch('/printer/gcode/script',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script})});
     const result=await sent.json();if(!sent.ok||result.error)throw Error(result.error?.message||'Command failed');
+    if(window.CncSettings&&['ZERO_ALL','ZERO_XY','ZERO_X','ZERO_Y','RESET_XY_TO_MACHINE','RESET_XY_TO_SPOILBOARD'].includes(requestedScript)){
+      const position=status.gcode_move?.position||[],current=[Number(position[0])-Number(status.gcode_move?.gcode_position?.[0]),Number(position[1])-Number(status.gcode_move?.gcode_position?.[1])];
+      const origin=requestedScript==='RESET_XY_TO_MACHINE'?[0,0]:requestedScript==='RESET_XY_TO_SPOILBOARD'?[Number(window.CncSettings.get('spoilboardX')),Number(window.CncSettings.get('spoilboardY'))]:[requestedScript==='ZERO_Y'?current[0]:Number(position[0]),requestedScript==='ZERO_X'?current[1]:Number(position[1])];
+      if(origin.every(Number.isFinite)){await window.CncSettings.set('lastWorkOriginX',origin[0]);await window.CncSettings.set('lastWorkOriginY',origin[1]);}
+    }
     if(script==='ZERO_Z'&&isMachinePaused(status)){if(window.CncPreflight)await window.CncPreflight.afterZero();}
     return status;
   }
@@ -746,7 +770,7 @@
       const homeGrid=homingPanel.querySelector('.col.text-center');
       if(homeGrid&&!document.getElementById('lowrider-home-dialog')){
         const launch=document.createElement('button');launch.id='lowrider-home-dialog';launch.type='button';launch.textContent='Home…';launch.style.cssText='grid-column:1/-1;order:0;min-height:36px;border:1px solid #777;border-radius:4px;background:#1976d2;color:white;font-size:13px';homeGrid.prepend(launch);
-        launch.addEventListener('click',async()=>{try{await freshHomeStatus();}catch(error){homingNotice(error.message);return;}const modal=cncDialog('Home axes');const note=document.createElement('p');note.textContent='Homing can reset work zeros. Recheck them before cutting.';modal.dialog.append(note);for(const command of ['HOME_ALL','HOME_X','HOME_Y','HOME_Z']){const original=homingPanel.querySelector(`[data-lowrider-home-command="${command}"]`);if(!original)continue;const b=modal.add(command==='HOME_ALL'?'Home All':command.slice(5),()=>{modal.dialog.close();if(command==='HOME_ALL'||command==='HOME_Z')runHomeCommand(command);else original.click();},command==='HOME_ALL'?'#1976d2':'#202020');const reason=controlUnavailable(original,controlStatus);b.disabled=!!reason;b.title=reason;}const force=modal.add(forcedEnabled()?'Turn off Forced unhomed motion':'Forced unhomed motion',()=>{modal.dialog.close();if(forcedEnabled())setForcedMode(false);else showForcedWarning();},'#b71c1c');force.disabled=!controlStatus?.cnc_force_jog||(!forcedEnabled()&&controlStatus?.toolhead?.homed_axes==='xyz');modal.add('Cancel',()=>modal.dialog.close());modal.open();});
+        launch.addEventListener('click',async()=>{try{await freshHomeStatus();}catch(error){homingNotice(error.message);return;}const modal=cncDialog('Home axes');const choice=homeXYChoice();const note=document.createElement('p');note.textContent=`Home All will apply ${choice.label.toLowerCase()} to work XY after homing. Change this once in Machine > After Home All. Tool Z zero is preserved.`;modal.dialog.append(note);const homeAll=homingPanel.querySelector('[data-lowrider-home-command="HOME_ALL"]');const preferred=modal.add(`Home All — ${choice.label}`,()=>{modal.dialog.close();homeAllWithPolicy();},'#2e7d32');const preferredReason=homeAll?controlUnavailable(homeAll,controlStatus):'Home All unavailable';preferred.disabled=!!preferredReason;preferred.title=preferredReason;for(const command of ['HOME_X','HOME_Y','HOME_Z']){const original=homingPanel.querySelector(`[data-lowrider-home-command="${command}"]`);if(!original)continue;const b=modal.add(command==='HOME_ALL'?'Home All':command.slice(5),()=>{modal.dialog.close();if(command==='HOME_ALL'||command==='HOME_Z')runHomeCommand(command);else original.click();},command==='HOME_ALL'?'#1976d2':'#202020');const reason=controlUnavailable(original,controlStatus);b.disabled=!!reason;b.title=reason;}const force=modal.add(forcedEnabled()?'Turn off Forced unhomed motion':'Forced unhomed motion',()=>{modal.dialog.close();if(forcedEnabled())setForcedMode(false);else showForcedWarning();},'#b71c1c');force.disabled=!controlStatus?.cnc_force_jog||(!forcedEnabled()&&controlStatus?.toolhead?.homed_axes==='xyz');modal.add('Cancel',()=>modal.dialog.close());modal.open();});
       }
       const launch=document.getElementById('lowrider-home-dialog');
       if(launch&&!document.getElementById('lowrider-quick-homes')){
@@ -774,12 +798,14 @@
           const choice=modal.add(label,async()=>{modal.dialog.close();try{await runCncCommand(script,true);allowBelowZ5=false;refreshJogChoices();}catch(error){homingNotice(error.message);}},script==='ZERO_Z'?'#1976d2':'#202020');
           if(script==='ZERO_Z'){choice.style.minHeight='56px';choice.style.fontSize='16px';choice.style.fontWeight='bold';}choice.disabled=[...axes].some(axis=>!controlStatus?.toolhead.homed_axes.includes(axis))||(isMachinePaused(controlStatus)&&script!=='ZERO_Z');if(isMachinePaused(controlStatus)&&script!=='ZERO_Z')choice.title='Keep the job XY origin unchanged while paused';
         }
-        const reset=modal.add('Reset work zero to machine origin',()=>{
-          modal.dialog.close();const confirm=cncDialog('Reset all work zeros?');
-          const note=document.createElement('p');note.textContent='Work X, Y and Z will match machine coordinates. No movement. Previous job zeros will be replaced; verify the job again before running. Safe Z still applies: fast jogging is available only above its clearance height. Use this with the table clear.';confirm.dialog.append(note);
-          const apply=confirm.add('Reset zeros',async()=>{apply.disabled=true;try{await runCncCommand('RESET_WORK_ORIGIN',true);allowBelowZ5=false;lastWorkZ=null;refreshJogChoices();confirm.dialog.close();homingNotice('Work zeros reset to machine origin. Recheck work/tool zeros before machining.');}catch(error){apply.disabled=false;homingNotice(error.message);}},'#1976d2');
-          confirm.add('Cancel',()=>confirm.dialog.close());confirm.open();
-        });reset.disabled=!!manualMotionReason(controlStatus)||isMachinePaused(controlStatus)||!['x','y','z'].every(axis=>controlStatus?.toolhead?.homed_axes?.includes(axis));
+        const origin=[Number(window.CncSettings?.get('spoilboardX')??8.2),Number(window.CncSettings?.get('spoilboardY')??9.5)];
+        for(const [label,script,color,description] of [
+          [`Reset XY to spoilboard (${origin[0].toFixed(3)}, ${origin[1].toFixed(3)} machine)`,'RESET_XY_TO_SPOILBOARD','#2e7d32',`Work X0/Y0 will align to machine X${origin[0].toFixed(3)} / Y${origin[1].toFixed(3)}.`],
+          ['Reset XY to machine coordinates','RESET_XY_TO_MACHINE','#202020','Work X/Y will match the displayed machine X/Y coordinates.']
+        ]){
+          const reset=modal.add(label,()=>{modal.dialog.close();const confirm=cncDialog(label+'?');const note=document.createElement('p');note.textContent='No movement. '+description+' The current tool Z zero is preserved. Previous job XY zeros will be replaced; verify the job before running.';confirm.dialog.append(note);const apply=confirm.add('Apply XY coordinates',async()=>{apply.disabled=true;try{await runCncCommand(script,true);confirm.dialog.close();homingNotice(script==='RESET_XY_TO_SPOILBOARD'?'Work X0/Y0 aligned to the configured spoilboard corner. Tool Z zero was preserved.':'Work X/Y reset to machine coordinates. Tool Z zero was preserved.');}catch(error){apply.disabled=false;homingNotice(error.message);}},color);confirm.add('Cancel',()=>confirm.dialog.close());confirm.open();},color);
+          reset.disabled=!!manualMotionReason(controlStatus)||isMachinePaused(controlStatus)||!['x','y'].every(axis=>controlStatus?.toolhead?.homed_axes?.includes(axis));
+        }
         modal.add('Cancel',()=>modal.dialog.close());modal.open();
       });
       const pause=create('lowrider-pause-resume','Pause');
