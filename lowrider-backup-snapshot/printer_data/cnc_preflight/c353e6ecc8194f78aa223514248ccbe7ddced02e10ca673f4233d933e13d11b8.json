@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "filename": "BONE_v4_STAGE_4_ONLY__T6__5_RADIALS_THEN_CUTOUT.gcode",
+  "sha256": "c353e6ecc8194f78aa223514248ccbe7ddced02e10ca673f4233d933e13d11b8",
+  "program_body_sha256": "c353e6ecc8194f78aa223514248ccbe7ddced02e10ca673f4233d933e13d11b8",
+  "size": 721637,
+  "modified_ns": 1793281978418345194,
+  "scan_seconds": 2.683,
+  "lines": 28250,
+  "moves": 12916,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 5731,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "CHECK BEFORE USE - T06 - Flat upcut end mill 3.175 mm",
+      "start": 5743,
+      "end": 721637,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      8.413,
+      7.46,
+      -15.2
+    ],
+    "max": [
+      62.54,
+      61.588,
+      15.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-10-29T15:09:30.967283+00:00"
+}

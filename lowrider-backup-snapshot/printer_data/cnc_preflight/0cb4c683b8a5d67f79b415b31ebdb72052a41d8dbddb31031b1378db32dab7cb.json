@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "filename": "Test_cut_-_BONE_v4__combined__1793282289973_196bee68dd14-travel-b464741e83.gcode",
+  "sha256": "0cb4c683b8a5d67f79b415b31ebdb72052a41d8dbddb31031b1378db32dab7cb",
+  "program_body_sha256": "0cb4c683b8a5d67f79b415b31ebdb72052a41d8dbddb31031b1378db32dab7cb",
+  "size": 4966652,
+  "modified_ns": 1793282324567170987,
+  "scan_seconds": 19.355,
+  "lines": 204600,
+  "moves": 99173,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 6730,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "Stage 1 6: CHECK BEFORE USE - T06 - Flat upcut end mill 3.175 mm; diameter 3.175 mm; router 16000 RPM",
+      "start": 6741,
+      "end": 3008199,
+      "tool_marker": true
+    },
+    {
+      "id": 2,
+      "label": "Stage 2 9: CHECK BEFORE USE - T09 - Ball end mill 3.175 mm two flute; diameter 3.175 mm; router 16000 RPM",
+      "start": 3008210,
+      "end": 4268311,
+      "tool_marker": true
+    },
+    {
+      "id": 3,
+      "label": "Stage 3 13: CHECK BEFORE USE - T13 - Tideway V groove cutter 90 deg; diameter 12.7 mm; router 16000 RPM",
+      "start": 4268322,
+      "end": 4279162,
+      "tool_marker": true
+    },
+    {
+      "id": 4,
+      "label": "Stage 4 6: CHECK BEFORE USE - T06 - Flat upcut end mill 3.175 mm; diameter 3.175 mm; router 16000 RPM",
+      "start": 4279173,
+      "end": 4966652,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      8.413,
+      6.214,
+      -15.2
+    ],
+    "max": [
+      62.54,
+      61.588,
+      15.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-10-29T14:51:58.602507+00:00"
+}
