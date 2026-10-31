@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "filename": "XZ_plates_v2__combined__1793444500119_d7dc74a822c2-travel-190541336b.gcode",
+  "sha256": "387c32795c555ef102ef05d75413b7d1f64ebacc845820536d174fd253581a9b",
+  "program_body_sha256": "387c32795c555ef102ef05d75413b7d1f64ebacc845820536d174fd253581a9b",
+  "size": 419580,
+  "modified_ns": 1793444508418477244,
+  "scan_seconds": 1.921,
+  "lines": 17819,
+  "moves": 8799,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 4473,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "Stage 1 4: 2.5x12 single upcut; diameter 2.5 mm; router 15000 RPM",
+      "start": 4484,
+      "end": 419580,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      -0.796,
+      -0.158,
+      -6.0
+    ],
+    "max": [
+      155.332,
+      116.878,
+      15.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-10-31T11:01:54.651746+00:00"
+}

@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "filename": "XZ_plates_v2__combined__1793449943932_de9273e53ba9-travel-94a3a10d59.gcode",
+  "sha256": "94f5e5cd7470a84eeb3499f3435b8bc8735c6f7dfd16b40ec1ec1f18f3240216",
+  "program_body_sha256": "94f5e5cd7470a84eeb3499f3435b8bc8735c6f7dfd16b40ec1ec1f18f3240216",
+  "size": 174948,
+  "modified_ns": 1793449947169841300,
+  "scan_seconds": 0.744,
+  "lines": 7563,
+  "moves": 3456,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 4136,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "Stage 1 4: 2.5x12 single upcut; diameter 2.5 mm; router 15000 RPM",
+      "start": 4147,
+      "end": 96797,
+      "tool_marker": true
+    },
+    {
+      "id": 2,
+      "label": "Stage 2 2: 1.5x8 single upcut; diameter 1.5 mm; router 16000 RPM",
+      "start": 96808,
+      "end": 174948,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      70.556,
+      34.759,
+      -6.5
+    ],
+    "max": [
+      233.934,
+      150.885,
+      15.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-10-31T12:32:29.446218+00:00"
+}
