@@ -372,10 +372,47 @@
     "previous": null
   },
   "homeXYMode": "spoilboard",
+  "interruption_record": {
+    "buffer_seconds": 1.0715742237589438,
+    "estimated_executed_seconds": null,
+    "feed_override": 1,
+    "file_position": 7803,
+    "filename": "cnc_runs/run-1793523798941-25a1404cb1f87293.gcode",
+    "identity": "cnc_runs/run-1793523798941-25a1404cb1f87293.gcode",
+    "machine_position": [
+      42.543,
+      36.092,
+      21.445999999999998,
+      0
+    ],
+    "operation": "",
+    "recovery_boundary": "pending file verification",
+    "recovery_offset": null,
+    "rewind_seconds": 5,
+    "saved_at": "2026-11-01T09:04:02.218Z",
+    "schema": 1,
+    "sha256": null,
+    "size": null,
+    "stage": null,
+    "state": "active",
+    "tool": null,
+    "work_origin_machine": [
+      0,
+      0,
+      20.9,
+      0
+    ],
+    "work_position": [
+      42.543,
+      36.092,
+      0.5459999999999994,
+      0
+    ]
+  },
   "jogScale": "coarse",
   "jogSpeed": 50,
-  "lastWorkOriginX": 19,
-  "lastWorkOriginY": 100.3,
+  "lastWorkOriginX": 50,
+  "lastWorkOriginY": 110,
   "routerDialMap": [
     {
       "label": "Lowest",
