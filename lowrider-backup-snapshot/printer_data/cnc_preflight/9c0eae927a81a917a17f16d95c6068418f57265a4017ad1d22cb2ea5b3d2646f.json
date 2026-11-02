@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "filename": "Test_cut_-_BONE_v7__combined__1793596725953_8e9e8cf18b0e-travel-bc53fe804f.gcode",
+  "sha256": "9c0eae927a81a917a17f16d95c6068418f57265a4017ad1d22cb2ea5b3d2646f",
+  "program_body_sha256": "9c0eae927a81a917a17f16d95c6068418f57265a4017ad1d22cb2ea5b3d2646f",
+  "size": 3634166,
+  "modified_ns": 1793596751648266202,
+  "scan_seconds": 14.369,
+  "lines": 148236,
+  "moves": 72260,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 4851,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "Stage 1 6: 3.125x14 single upcut; diameter 3.175 mm; router 16000 RPM",
+      "start": 4862,
+      "end": 1028132,
+      "tool_marker": true
+    },
+    {
+      "id": 2,
+      "label": "Stage 2 6: 3.175 1UC L14; diameter 3.175 mm; router 16000 RPM",
+      "start": 1028143,
+      "end": 2409681,
+      "tool_marker": true
+    },
+    {
+      "id": 3,
+      "label": "Stage 3 9: ? 3.175 R1.588 2F L12; diameter 3.175 mm; router 16000 RPM",
+      "start": 2409692,
+      "end": 3630067,
+      "tool_marker": true
+    },
+    {
+      "id": 4,
+      "label": "Stage 4 13: CHECK BEFORE USE - T13 - Tideway V groove cutter 90 deg; diameter 12.8 mm; router 16000 RPM",
+      "start": 3630078,
+      "end": 3634166,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      8.413,
+      7.46,
+      -15.2
+    ],
+    "max": [
+      61.588,
+      61.588,
+      15.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-11-02T05:19:28.807507+00:00"
+}
