@@ -300,6 +300,9 @@ html[data-workspace=true] dialog[data-docked] .console-output{height:clamp(120px
 #pendant-speed-cells{grid-column:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px;min-width:0;font-variant-numeric:tabular-nums}
 #pendant-speed-cells>div{min-width:0;text-align:center}#pendant-speed-cells small{display:block;color:#bbb;font-size:12px}#pendant-speed-cells strong{display:block;font-size:14px;white-space:nowrap;min-width:0}
 #pendant-job-percent{font-size:30px!important;grid-column:1;min-width:0}#pendant-job-file{font-size:14px!important;font-weight:bold;margin-right:0}
+#pendant-job-timing{grid-column:3;grid-row:1;min-width:92px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}#pendant-job-timing strong{display:block;font-size:22px;color:#fff}#pendant-job-timing small{display:block;font-size:10px;color:#bbb}
+#pendant-job-motion-summary{grid-template-columns:75px minmax(0,1fr) auto!important}
+@media(max-width:520px){#pendant-job-timing{min-width:76px}#pendant-job-timing strong{font-size:18px}#pendant-job-timing small{font-size:9px}}
 #pendant-run-context{font-size:14px;line-height:1.45;overflow-wrap:anywhere}#pendant-context-operation{font-weight:bold}#pendant-context-next,#pendant-context-eta{color:#d2e8b7}
 #pendant-running-details{font-size:12px;color:#bbb}#pendant-motion-limits{white-space:pre-wrap;text-align:left;font-size:12px}
 #pendant-paused-note{white-space:pre-line;font-size:13px!important;animation:cnc-pause-attention 2s ease-in-out infinite}
