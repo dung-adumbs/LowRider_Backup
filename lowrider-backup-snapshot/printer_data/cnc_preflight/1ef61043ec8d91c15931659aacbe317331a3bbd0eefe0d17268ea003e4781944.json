@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "filename": "Mom_Relief_v4_ESTOP_RECOVERY_T6.gcode",
+  "sha256": "1ef61043ec8d91c15931659aacbe317331a3bbd0eefe0d17268ea003e4781944",
+  "program_body_sha256": "1ef61043ec8d91c15931659aacbe317331a3bbd0eefe0d17268ea003e4781944",
+  "size": 3017372,
+  "modified_ns": 1793925956151827909,
+  "scan_seconds": 11.794,
+  "lines": 126319,
+  "moves": 62372,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 3234,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "Stage 1 6: 3.175 1UC L14; diameter 3.175 mm; router 16000 RPM",
+      "start": 3245,
+      "end": 22967,
+      "tool_marker": true
+    },
+    {
+      "id": 2,
+      "label": "Stage 2 10: ? 3.175 R0.25 IA6 L15; diameter 0.5 mm; router 24000 RPM",
+      "start": 22978,
+      "end": 3017372,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      11.012,
+      9.01,
+      -15.2
+    ],
+    "max": [
+      88.988,
+      100.037,
+      15.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-11-06T00:47:58.382910+00:00"
+}

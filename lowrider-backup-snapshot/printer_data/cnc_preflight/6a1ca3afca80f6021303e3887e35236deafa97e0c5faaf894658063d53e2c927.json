@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "filename": "Mom_Relief_v4__combined__1793922447026_9462304d97d8-travel-b1c9935f15.gcode",
+  "sha256": "6a1ca3afca80f6021303e3887e35236deafa97e0c5faaf894658063d53e2c927",
+  "program_body_sha256": "6a1ca3afca80f6021303e3887e35236deafa97e0c5faaf894658063d53e2c927",
+  "size": 3432381,
+  "modified_ns": 1793922470765635720,
+  "scan_seconds": 14.131,
+  "lines": 143617,
+  "moves": 70836,
+  "sections": [
+    {
+      "id": 0,
+      "label": "Program entry / tool 1",
+      "start": 0,
+      "end": 4580,
+      "tool_marker": false
+    },
+    {
+      "id": 1,
+      "label": "Stage 1 13: ? 1/2 IA90; diameter 12.8 mm; router 16000 RPM",
+      "start": 4591,
+      "end": 13627,
+      "tool_marker": true
+    },
+    {
+      "id": 2,
+      "label": "Stage 2 6: 3.175 1UC L14; diameter 3.175 mm; router 16000 RPM",
+      "start": 13638,
+      "end": 437976,
+      "tool_marker": true
+    },
+    {
+      "id": 3,
+      "label": "Stage 3 10: ? 3.175 R0.25 IA6 L15; diameter 0.5 mm; router 24000 RPM",
+      "start": 437987,
+      "end": 3432381,
+      "tool_marker": true
+    }
+  ],
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "available": true,
+    "min": [
+      11.012,
+      9.01,
+      -15.2
+    ],
+    "max": [
+      88.988,
+      100.037,
+      15.0
+    ],
+    "program_body_sha256": null,
+    "message": "Preliminary header bounds only; full scan required."
+  },
+  "loops": [],
+  "runtime_macros": [],
+  "analyzed_at": "2026-11-05T23:48:25.486084+00:00"
+}
