@@ -61,15 +61,10 @@ def main():
     checked_copy(HOME / 'printer_data/config/cnc_preflight_profile.json', pathlib.Path('printer_data/config/cnc_preflight_profile.json'))
     for name in ('cnc_preflight.py', 'cnc_gcode_scan.py', 'cnc_travel_optimize.py'):
         checked_copy(HOME / 'moonraker/moonraker/components' / name, pathlib.Path('moonraker/moonraker/components') / name)
-    for src in sorted((HOME / 'printer_data/cnc_preflight').glob('*.json')):
-        checked_copy(src, pathlib.Path('printer_data/cnc_preflight') / src.name)
-    gcodes = HOME / 'printer_data/gcodes'
-    for src in sorted(gcodes.rglob('*')):
-        relative = src.relative_to(gcodes)
-        if any(part.startswith('.') for part in relative.parts) or src.is_symlink() or not src.is_file():
-            continue
-        if src.suffix.lower() in ('.gcode', '.gco', '.gc', '.nc', '.ngc', '.tap', '.cnc', '.txt', '.md'):
-            checked_copy(src, pathlib.Path('printer_data/gcodes') / relative)
+    # G-code, prepared/run copies and preflight scan caches are generated job
+    # artifacts.  Keeping them in this configuration repository made Git pack
+    # hundreds of megabytes on a 512 MB Pi and could starve Moonraker/Klipper.
+    # Preserve programs through the dedicated project/archive workflow instead.
     for namespace in ('lowrider', 'mainsail', 'cnc_pendant'):
         with urllib.request.urlopen('http://127.0.0.1:7125/server/database/item?namespace=' + namespace, timeout=15) as response:
             value = json.load(response)['result']['value']

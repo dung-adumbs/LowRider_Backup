@@ -30,6 +30,22 @@ text = text.replace('](screenshots/', '](lowrider-backup-docs/screenshots/').rep
 text = text.replace('](RESTORE.md)', '](lowrider-backup-docs/RESTORE.md)')
 (home / 'config_backup/README.md').write_text(text)
 PY
+# A job may have started while the snapshot was being assembled.  Recheck
+# immediately before Git work so backup CPU, memory and I/O never compete with
+# an active or paused controller job.
+if python3 "$HOME/lowrider-backup-tools/idle_guard.py"; then
+    :
+else
+    guard_status=$?
+    if [ "$guard_status" -eq 75 ]; then exit 0; fi
+    exit "$guard_status"
+fi
+# Bound Git's packer for the Pi Zero 2 W.  These repository-local settings are
+# inherited by the push performed by Klipper-Backup.
+git -C "$HOME/config_backup" config pack.threads 1
+git -C "$HOME/config_backup" config pack.windowMemory 8m
+git -C "$HOME/config_backup" config pack.deltaCacheSize 8m
+git -C "$HOME/config_backup" config core.compression 1
 bash "$HOME/klipper-backup/script.sh"
 # Upstream's final cleanup can hide a failed push status. Check the remote explicitly.
 local_head=$(git -C "$HOME/config_backup" rev-parse HEAD)

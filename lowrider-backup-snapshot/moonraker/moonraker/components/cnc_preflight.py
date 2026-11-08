@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio, datetime, hashlib, json, math, pathlib, uuid, logging, os
 from ..common import RequestType
 from .cnc_gcode_scan import scan_file, reuse_speed_only_analysis, metadata_from_header, fingerprints, evaluate_bounds, thumbnail_data_url, keepout_interferences
-from .cnc_travel_optimize import inspect_header, optimize_bytes, MAX_BYTES
+from .cnc_travel_optimize import inspect_header, optimize_file, MAX_BYTES
 from .cnc_health import CNCHealth
 
 class CNCPreflight:
@@ -161,25 +161,29 @@ class CNCPreflight:
         try:
             def prepare():
                 if path.stat().st_size>MAX_BYTES:raise ValueError('File exceeds the 64 MiB optimization limit.')
-                with path.open('rb') as source:data=source.read(MAX_BYTES+1)
-                if expected and hashlib.sha256(data).hexdigest()!=expected:raise ValueError('Source changed since preview. Preview it again.')
                 # Account for both current and explicitly programmed run overrides.
                 import re
                 factors=[1.,s.get('gcode_move',{}).get('speed_factor',1.)]
-                factors += [float(v)/100 for v in re.findall(rb'^\s*M220\s+S([\d.]+)\s*(?:;.*)?$',data,re.M|re.I)]
+                override=re.compile(rb'^\s*M220\s+S([\d.]+)\s*(?:;.*)?$',re.I)
+                with path.open('rb') as source:
+                    for line in source:
+                        match=override.match(line)
+                        if match:factors.append(float(match.group(1))/100)
                 factor=max(factors);tool=s.get('toolhead',{});printer=s.get('configfile',{}).get('config',{}).get('printer',{})
                 maximum=float(tool.get('max_velocity',printer.get('max_velocity',0)));zmaximum=float(printer.get('max_z_velocity',maximum))
                 if maximum<=0 or zmaximum<=0:raise ValueError('Machine velocity limits are unavailable.')
                 if xy*factor>maximum*60+.001 or z*factor>zmaximum*60+.001:raise ValueError('Travel rate exceeds machine velocity limits after run-speed override. Lower the travel rates or override and preview again.')
-                return optimize_bytes(data,xy,z)
-            payload,report=await asyncio.to_thread(prepare)
+                target=None
+                if expected:
+                    folder=self.root/'cnc_optimized';folder.mkdir(exist_ok=True)
+                    if folder.is_symlink() or folder.resolve().parent!=self.root:raise ValueError('Unsafe output directory.')
+                    target=folder/(path.stem[:80]+'-travel-'+identity[:10]+'.gcode')
+                report=optimize_file(path,xy,z,target,expected)
+                return target,report
+            target,report=await asyncio.to_thread(prepare)
             if expected:
+                # Recheck idle state before publishing the completed copy to the UI.
                 self._optimization_idle(await self._snapshot())
-                folder=self.root/'cnc_optimized';folder.mkdir(exist_ok=True)
-                if folder.is_symlink() or folder.resolve().parent!=self.root:raise ValueError('Unsafe output directory.')
-                name=path.stem[:80]+'-travel-'+identity[:10]+'.gcode';target=folder/name
-                # Never overwrite source or a previous optimized file.
-                with target.open('xb') as output:output.write(payload)
                 filename=target.relative_to(self.root).as_posix()
                 self.optimization={**self.optimization,**report,'state':'created','filename':filename,'message':'Copy created. Stage & verify it before Start.'}
             else:self.optimization={**self.optimization,**report,'state':'preview','message':'Preview only; no file written.'}

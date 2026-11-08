@@ -560,10 +560,21 @@
     const mode=window.CncSettings?.get('homeXYMode')||'spoilboard';
     return mode==='machine'?{mode,label:'Machine coordinates',command:'RESET_XY_TO_MACHINE'}:mode==='last'?{mode,label:'Last saved work origin',command:'RESET_XY_TO_LAST'}:{mode:'spoilboard',label:'Spoilboard coordinates',command:'RESET_XY_TO_SPOILBOARD'};
   }
-  async function homeAllWithPolicy(){
-    const choice=homeXYChoice(),homed=await runHomeCommand('HOME_ALL');if(!homed)return;
+  function homeXYChoices(){
+    const choices=[
+      {mode:'spoilboard',label:'Spoilboard coordinates',command:'RESET_XY_TO_SPOILBOARD'},
+      {mode:'last',label:'Last saved work origin',command:'RESET_XY_TO_LAST'},
+      {mode:'machine',label:'Machine coordinates',command:'RESET_XY_TO_MACHINE'}
+    ],preferred=homeXYChoice();
+    return [preferred,...choices.filter(choice=>choice.mode!==preferred.mode)];
+  }
+  async function homeAllWithChoice(choice){
+    const homed=await runHomeCommand('HOME_ALL');if(!homed)return;
     try{await runCncCommand(choice.command,true);homingNotice(`Homing complete. Work XY now uses ${choice.label.toLowerCase()}. Tool Z zero was not changed.`);}
     catch(error){homingNotice(`Homing completed, but ${choice.label.toLowerCase()} could not be applied: ${error.message}`);}
+  }
+  async function homeAllWithPolicy(){
+    return homeAllWithChoice(homeXYChoice());
   }
   document.addEventListener('click', event => {
     const button = event.target.closest?.('.macrogroup_lowrider-homing_panel button, button[data-lowrider-shake], button[data-lowrider-disable-steppers]');
@@ -770,7 +781,7 @@
       const homeGrid=homingPanel.querySelector('.col.text-center');
       if(homeGrid&&!document.getElementById('lowrider-home-dialog')){
         const launch=document.createElement('button');launch.id='lowrider-home-dialog';launch.type='button';launch.textContent='Home…';launch.style.cssText='grid-column:1/-1;order:0;min-height:36px;border:1px solid #777;border-radius:4px;background:#1976d2;color:white;font-size:13px';homeGrid.prepend(launch);
-        launch.addEventListener('click',async()=>{try{await freshHomeStatus();}catch(error){homingNotice(error.message);return;}const modal=cncDialog('Home axes');const choice=homeXYChoice();const note=document.createElement('p');note.textContent=`Home All will apply ${choice.label.toLowerCase()} to work XY after homing. Change this once in Machine > After Home All. Tool Z zero is preserved.`;modal.dialog.append(note);const homeAll=homingPanel.querySelector('[data-lowrider-home-command="HOME_ALL"]');const preferred=modal.add(`Home All — ${choice.label}`,()=>{modal.dialog.close();homeAllWithPolicy();},'#2e7d32');const preferredReason=homeAll?controlUnavailable(homeAll,controlStatus):'Home All unavailable';preferred.disabled=!!preferredReason;preferred.title=preferredReason;for(const command of ['HOME_X','HOME_Y','HOME_Z']){const original=homingPanel.querySelector(`[data-lowrider-home-command="${command}"]`);if(!original)continue;const b=modal.add(command==='HOME_ALL'?'Home All':command.slice(5),()=>{modal.dialog.close();if(command==='HOME_ALL'||command==='HOME_Z')runHomeCommand(command);else original.click();},command==='HOME_ALL'?'#1976d2':'#202020');const reason=controlUnavailable(original,controlStatus);b.disabled=!!reason;b.title=reason;}const force=modal.add(forcedEnabled()?'Turn off Forced unhomed motion':'Forced unhomed motion',()=>{modal.dialog.close();if(forcedEnabled())setForcedMode(false);else showForcedWarning();},'#b71c1c');force.disabled=!controlStatus?.cnc_force_jog||(!forcedEnabled()&&controlStatus?.toolhead?.homed_axes==='xyz');modal.add('Cancel',()=>modal.dialog.close());modal.open();});
+        launch.addEventListener('click',async()=>{try{await freshHomeStatus();}catch(error){homingNotice(error.message);return;}const modal=cncDialog('Home axes');const note=document.createElement('p');note.textContent='Choose the work XY origin to apply after Home All. The first choice is your Machine preference. Tool Z zero is preserved.';modal.dialog.append(note);const homeAll=homingPanel.querySelector('[data-lowrider-home-command="HOME_ALL"]'),homeReason=homeAll?controlUnavailable(homeAll,controlStatus):'Home All unavailable';for(const [index,choice] of homeXYChoices().entries()){const button=modal.add(`Home All — ${choice.label}`,()=>{modal.dialog.close();homeAllWithChoice(choice);},index===0?'#2e7d32':'#1976d2');button.disabled=!!homeReason;button.title=homeReason;}for(const command of ['HOME_X','HOME_Y','HOME_Z']){const original=homingPanel.querySelector(`[data-lowrider-home-command="${command}"]`);if(!original)continue;const b=modal.add(command==='HOME_ALL'?'Home All':command.slice(5),()=>{modal.dialog.close();if(command==='HOME_ALL'||command==='HOME_Z')runHomeCommand(command);else original.click();},command==='HOME_ALL'?'#1976d2':'#202020');const reason=controlUnavailable(original,controlStatus);b.disabled=!!reason;b.title=reason;}const force=modal.add(forcedEnabled()?'Turn off Forced unhomed motion':'Forced unhomed motion',()=>{modal.dialog.close();if(forcedEnabled())setForcedMode(false);else showForcedWarning();},'#b71c1c');force.disabled=!controlStatus?.cnc_force_jog||(!forcedEnabled()&&controlStatus?.toolhead?.homed_axes==='xyz');modal.add('Cancel',()=>modal.dialog.close());modal.open();});
       }
       const launch=document.getElementById('lowrider-home-dialog');
       if(launch&&!document.getElementById('lowrider-quick-homes')){

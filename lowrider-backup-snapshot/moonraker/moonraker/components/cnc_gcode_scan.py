@@ -201,7 +201,11 @@ def scan_file(path,progress=None):
                     if absolute:target[i]=params[axis]*factor;target_mask&=~(1<<i)
                     else:target[i]+=params[axis]*factor
             if number in [0,1] and not any(a in params for a in 'XYZ'):continue
-            model.point(at,pos,mask,section)
+            # The previous move's target is this move's start. Retaining both
+            # endpoints for every linear segment doubled memory on million-move
+            # relief programs. Keep an explicit start only at program/section
+            # boundaries; every move still retains its target and arc extrema.
+            if not model.offsets or model.section_ids[-1]!=section:model.point(at,pos,mask,section)
             if number in [2,3]:
                 model.uses_arcs=True;u,v,w,cu,cv={17:(0,1,2,'I','J'),18:(2,0,1,'K','I'),19:(1,2,0,'J','K')}[plane]
                 if 'R' in params:model.issue(model.lines,'R-form arc unsupported by this verifier')
