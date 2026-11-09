@@ -556,6 +556,15 @@
     }catch(error){notify(`Command not completed: ${error.message}`);return false;}
     finally{homingPending=false;updateAvailability();}
   }
+  async function waitForHomeCompletion(axes='xyz',timeoutMs=120000){
+    const deadline=Date.now()+timeoutMs;
+    while(true){
+      const state=await freshHomeStatus();
+      if([...axes].every(axis=>state.toolhead?.homed_axes?.includes(axis))&&!motionStillQueued(state))return state;
+      if(Date.now()>=deadline)throw Error('Homing did not report complete before the work-origin timeout. Apply the work origin from Home again after checking the machine.');
+      await new Promise(resolve=>setTimeout(resolve,250));
+    }
+  }
   function homeXYChoice(){
     const mode=window.CncSettings?.get('homeXYMode')||'spoilboard';
     return mode==='machine'?{mode,label:'Machine coordinates',command:'RESET_XY_TO_MACHINE'}:mode==='last'?{mode,label:'Last saved work origin',command:'RESET_XY_TO_LAST'}:{mode:'spoilboard',label:'Spoilboard coordinates',command:'RESET_XY_TO_SPOILBOARD'};
@@ -570,7 +579,7 @@
   }
   async function homeAllWithChoice(choice){
     const homed=await runHomeCommand('HOME_ALL');if(!homed)return;
-    try{await runCncCommand(choice.command,true);homingNotice(`Homing complete. Work XY now uses ${choice.label.toLowerCase()}. Tool Z zero was not changed.`);}
+    try{homingNotice('Homing motion submitted. Waiting to apply the selected work origin…');await waitForHomeCompletion('xyz');await runCncCommand(choice.command,true);homingNotice(`Homing complete. Work XY now uses ${choice.label.toLowerCase()}. Tool Z zero was not changed.`);}
     catch(error){homingNotice(`Homing completed, but ${choice.label.toLowerCase()} could not be applied: ${error.message}`);}
   }
   async function homeAllWithPolicy(){
