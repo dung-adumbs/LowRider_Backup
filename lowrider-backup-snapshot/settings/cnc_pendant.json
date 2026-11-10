@@ -436,8 +436,8 @@
   },
   "jogScale": "coarse",
   "jogSpeed": 50,
-  "lastWorkOriginX": 90,
-  "lastWorkOriginY": 100,
+  "lastWorkOriginX": 8.2,
+  "lastWorkOriginY": 9.5,
   "routerDialMap": [
     {
       "label": "Lowest",
