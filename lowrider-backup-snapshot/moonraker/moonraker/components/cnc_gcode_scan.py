@@ -270,28 +270,34 @@ def reuse_speed_only_analysis(source,target,model):
     """Reuse immutable geometry only for byte-position-preserving M220 edits."""
     from dataclasses import replace
     source=Path(source);target=Path(target);before=source.stat();after_before=target.stat()
-    old=source.read_bytes();new=target.read_bytes()
-    if hashlib.sha256(old).hexdigest()!=model.sha256 or len(old)!=len(new):return None
-    if b'; CNC_ROLLUP_VERSION: 1' not in old[:262144]:return None
-    left=old.splitlines(keepends=True);right=new.splitlines(keepends=True)
-    if len(left)!=len(right):return None
-    count=0
-    for a,b in zip(left,right):
-        if len(a)!=len(b):return None
-        original=a.rstrip(b'\r\n');changed=b.rstrip(b'\r\n')
-        if a[len(original):]!=b[len(changed):]:return None
-        match=re.fullmatch(rb'M220[ \t]+S([\d.]+)[ \t]*',original)
-        if match:
-            count+=1
-            if count==1:
-                rate=re.fullmatch(rb'M220[ \t]+S([\d.]+)[ \t]*',changed)
-                if not rate or not 1<=float(rate[1])<=300:return None
-            elif float(match[1])!=100 or changed!=b'; reset'.ljust(len(original),b' '):return None
-        elif a!=b:return None
+    if before.st_size!=after_before.st_size:return None
+    old_hash=hashlib.sha256();new_hash=hashlib.sha256();header=bytearray();count=0
+    # Stream both files.  Splitting million-line relief programs into two
+    # complete Python line lists can exhaust a 512 MiB controller even though
+    # the compact motion model itself fits comfortably.
+    with source.open('rb') as left,target.open('rb') as right:
+        while True:
+            a=left.readline();b=right.readline()
+            if not a and not b:break
+            if not a or not b or len(a)!=len(b):return None
+            old_hash.update(a);new_hash.update(b)
+            if len(header)<262144:header.extend(a[:262144-len(header)])
+            original=a.rstrip(b'\r\n');changed=b.rstrip(b'\r\n')
+            if a[len(original):]!=b[len(changed):]:return None
+            match=re.fullmatch(rb'M220[ \t]+S([\d.]+)[ \t]*',original)
+            if match:
+                count+=1
+                if count==1:
+                    rate=re.fullmatch(rb'M220[ \t]+S([\d.]+)[ \t]*',changed)
+                    if not rate or not 1<=float(rate[1])<=300:return None
+                elif float(match[1])!=100 or changed!=b'; reset'.ljust(len(original),b' '):return None
+            elif a!=b:return None
+    if old_hash.hexdigest()!=model.sha256:return None
+    if b'; CNC_ROLLUP_VERSION: 1' not in header:return None
     if not count:return None
     final=source.stat();end=target.stat()
     if (before.st_size,before.st_mtime_ns,before.st_ino)!=(final.st_size,final.st_mtime_ns,final.st_ino):return None
     if (after_before.st_size,after_before.st_mtime_ns,after_before.st_ino)!=(end.st_size,end.st_mtime_ns,end.st_ino):return None
     digest,body=fingerprints(target)
-    if digest!=hashlib.sha256(new).hexdigest():return None
+    if digest!=new_hash.hexdigest():return None
     return replace(model,filename=target.name,sha256=digest,body_sha256=body,size=end.st_size,modified_ns=end.st_mtime_ns,seconds=0.)
