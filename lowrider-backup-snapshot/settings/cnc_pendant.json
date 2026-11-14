@@ -373,15 +373,15 @@
   },
   "homeXYMode": "spoilboard",
   "interruption_record": {
-    "completed_at": "2026-11-12T15:07:49.569Z",
-    "filename": "cnc_optimized/Mom_Relief_v11__S001-T8__Setup2_2__20261112-011001-628799__991bd95a--7050a663f24-travel-c8798fa3ee.gcode",
+    "completed_at": "2026-11-14T07:13:49.033Z",
+    "filename": "cnc_optimized/Mom_Relief_v14__S001-T6__Setup6__20261114-060441-944990__98c022f6--575dd7f42a57b-travel-9cd35d9081.gcode",
     "schema": 1,
     "state": "complete"
   },
   "jogScale": "coarse",
-  "jogSpeed": 50,
-  "lastWorkOriginX": "59",
-  "lastWorkOriginY": "210",
+  "jogSpeed": 100,
+  "lastWorkOriginX": 59,
+  "lastWorkOriginY": 210,
   "routerDialMap": [
     {
       "label": "Lowest",
