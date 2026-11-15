@@ -373,15 +373,15 @@
   },
   "homeXYMode": "spoilboard",
   "interruption_record": {
-    "completed_at": "2026-11-14T07:13:49.033Z",
-    "filename": "cnc_optimized/Mom_Relief_v14__S001-T6__Setup6__20261114-060441-944990__98c022f6--575dd7f42a57b-travel-9cd35d9081.gcode",
+    "completed_at": "2026-11-15T12:11:33.942Z",
+    "filename": "cnc_runs/run-1794743213914-d5c5e60455d1aa12.gcode",
     "schema": 1,
     "state": "complete"
   },
   "jogScale": "coarse",
   "jogSpeed": 100,
-  "lastWorkOriginX": 59,
-  "lastWorkOriginY": 210,
+  "lastWorkOriginX": 50,
+  "lastWorkOriginY": 70,
   "routerDialMap": [
     {
       "label": "Lowest",
