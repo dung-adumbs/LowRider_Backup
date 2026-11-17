@@ -373,15 +373,15 @@
   },
   "homeXYMode": "spoilboard",
   "interruption_record": {
-    "completed_at": "2026-11-15T12:11:33.942Z",
-    "filename": "cnc_runs/run-1794743213914-d5c5e60455d1aa12.gcode",
+    "completed_at": "2026-11-17T13:36:32.656Z",
+    "filename": "cnc_runs/run-1794921927145-812ff1ac8799b06d.gcode",
     "schema": 1,
     "state": "complete"
   },
   "jogScale": "coarse",
-  "jogSpeed": 100,
-  "lastWorkOriginX": 50,
-  "lastWorkOriginY": 70,
+  "jogSpeed": 20,
+  "lastWorkOriginX": 340,
+  "lastWorkOriginY": 150,
   "routerDialMap": [
     {
       "label": "Lowest",
