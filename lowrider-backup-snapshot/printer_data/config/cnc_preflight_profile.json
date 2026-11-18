@@ -45,6 +45,8 @@
     "gcode_macro M220": "a1d2d6679faf76ff25f8cccf0c96fb605b1e9479d804562e2f5feb6b98ecf940",
     "gcode_macro SDCARD_PRINT_FILE": "96df29d453a1a7dc74382750dd384c801bdb22bb5330106ce68e9bd106864aff",
     "gcode_macro _CNC_PREFLIGHT_STATE": "551fdaf8300589e4508f9ccb936c00f58b18e9e2a253aafeb2b806edcbbcf3cd",
-    "gcode_macro _CNC_PREFLIGHT_REQUIRE": "dac0df82cbda4a7d6c129b2123eaa24201a9095224a6c4ac752b82be82ccf04c"
+    "gcode_macro _CNC_PREFLIGHT_REQUIRE": "dac0df82cbda4a7d6c129b2123eaa24201a9095224a6c4ac752b82be82ccf04c",
+    "gcode_macro PEN_UP": "04a0264c0f1a76a94ad3547c787a8ec1a0bad74b72e9e05b0055309a905ba260",
+    "gcode_macro PEN_DOWN": "ab7f74d30b81c2866ee58c4e6d8538ca86e3e52ab8bf351fa64737bf25a2bf9c"
   }
 }

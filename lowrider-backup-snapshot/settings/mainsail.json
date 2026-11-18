@@ -45,6 +45,9 @@
     "mode": "simple"
   },
   "view": {
+    "configfiles": {
+      "countPerPage": 25
+    },
     "toolhead": {}
   }
 }

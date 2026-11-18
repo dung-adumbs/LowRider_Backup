@@ -140,7 +140,7 @@ def scan_file(path,progress=None):
             if not line:continue
             line=re.sub(r'^N\d+\s*','',line,flags=re.I)
             first=line.split(None,1)[0].upper()
-            if first in ['START_JOB','END_JOB','LED_ON','LED_OFF','CNC_TEST_PREFLIGHT']:
+            if first in ['START_JOB','END_JOB','LED_ON','LED_OFF','CNC_TEST_PREFLIGHT','PEN_UP','PEN_DOWN']:
                 valid=(line.upper()==first) if first!='CNC_TEST_PREFLIGHT' else bool(re.fullmatch(r'CNC_TEST_PREFLIGHT\s+KIND=(?:CIRCLE|SQUARE)',line,re.I))
                 if not valid:model.issue(model.lines,'Unsupported parameters on reviewed macro '+first)
                 if first not in model.runtime_macros:model.runtime_macros.append(first)
